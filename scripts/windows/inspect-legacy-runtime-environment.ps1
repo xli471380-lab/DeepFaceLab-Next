@@ -131,23 +131,62 @@ $selectedPackages = @($allPackages | Where-Object {
     $wantedNormalized -contains $name
 } | Sort-Object name)
 
-$batFiles = @(Get-ChildItem -LiteralPath $runtimeRoot -Filter '*.bat' -File -Recurse -Force -ErrorAction Stop | Sort-Object FullName)
-$topLevelBatFiles = @($batFiles | Where-Object { $_.DirectoryName.TrimEnd('\') -ieq $runtimeRoot.TrimEnd('\') })
+# Historical TensorFlow bundles can contain stale or inaccessible include-tree
+# paths. They are irrelevant to BAT inspection, so recursive enumeration records
+# and skips those errors instead of aborting the whole read-only inspection.
+$topLevelBatFiles = @(Get-ChildItem -LiteralPath $runtimeRoot -Filter '*.bat' -File -Force -ErrorAction Stop | Sort-Object FullName)
+$batEnumerationErrors = @()
+$recursiveBatFiles = @(Get-ChildItem -LiteralPath $runtimeRoot -Filter '*.bat' -File -Recurse -Force -ErrorAction SilentlyContinue -ErrorVariable +batEnumerationErrors | Sort-Object FullName)
+$batFiles = @((@($topLevelBatFiles) + @($recursiveBatFiles)) | Sort-Object FullName -Unique)
 
+$enumerationErrorRecords = @($batEnumerationErrors | ForEach-Object {
+    [ordered]@{
+        message = $_.Exception.Message
+        category = $_.CategoryInfo.ToString()
+        target = [string]$_.TargetObject
+    }
+})
+
+$batReadErrors = New-Object System.Collections.ArrayList
 $batInventory = @($batFiles | ForEach-Object {
+    $hash = $null
+    try {
+        $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256 -ErrorAction Stop).Hash
+    }
+    catch {
+        [void]$batReadErrors.Add([ordered]@{
+            relative_path = $_.FullName.Substring($runtimeRoot.TrimEnd('\').Length).TrimStart('\')
+            operation = 'hash'
+            message = $_.Exception.Message
+        })
+    }
+
     [ordered]@{
         relative_path = $_.FullName.Substring($runtimeRoot.TrimEnd('\').Length).TrimStart('\')
         full_path = $_.FullName
         size_bytes = [int64]$_.Length
-        sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+        sha256 = $hash
     }
 })
 
 $environmentLinePattern = '(?i)(^|\s)(set|setx)\s+[^=]*(PATH|PYTHONHOME|PYTHONPATH|CUDA|CUDNN|DFL|WORKSPACE)|_internal|python-3\.6\.8|ffmpeg\.exe|main\.py|CUDA\\|CUDNN\\'
 $environmentLines = New-Object System.Collections.ArrayList
 foreach ($bat in $batFiles) {
+    $lines = $null
+    try {
+        $lines = @(Get-Content -LiteralPath $bat.FullName -ErrorAction Stop)
+    }
+    catch {
+        [void]$batReadErrors.Add([ordered]@{
+            relative_path = $bat.FullName.Substring($runtimeRoot.TrimEnd('\').Length).TrimStart('\')
+            operation = 'read'
+            message = $_.Exception.Message
+        })
+        continue
+    }
+
     $lineNumber = 0
-    foreach ($line in @(Get-Content -LiteralPath $bat.FullName -ErrorAction Stop)) {
+    foreach ($line in $lines) {
         $lineNumber++
         if ($line -match $environmentLinePattern) {
             [void]$environmentLines.Add([ordered]@{
@@ -163,7 +202,14 @@ foreach ($bat in $batFiles) {
     "{0}:{1}: {2}" -f $_.relative_path, $_.line, $_.text
 }) | Set-Content -LiteralPath $batLinesPath -Encoding UTF8
 
-$status = if ($packageProbe.exit_code -eq 0 -and $null -eq $packageParseError -and $allPackages.Count -gt 0 -and $batFiles.Count -gt 0) {
+$batReadErrorRecords = @($batReadErrors | ForEach-Object { $_ })
+$status = if (
+    $packageProbe.exit_code -eq 0 -and
+    $null -eq $packageParseError -and
+    $allPackages.Count -gt 0 -and
+    $topLevelBatFiles.Count -gt 0 -and
+    $batFiles.Count -gt 0
+) {
     'passed'
 }
 else {
@@ -171,7 +217,7 @@ else {
 }
 
 $report = [ordered]@{
-    schema_version = 1
+    schema_version = 2
     generated_at_utc = $timestamp.ToString('o')
     repository_commit = (& git -C $repoRoot rev-parse HEAD 2>$null | Out-String).Trim()
     phase = 'legacy_runtime_static_environment_inspection'
@@ -200,6 +246,10 @@ $report = [ordered]@{
         top_level_count = $topLevelBatFiles.Count
         top_level = @($topLevelBatFiles | ForEach-Object { $_.Name })
         inventory = @($batInventory)
+        enumeration_error_count = $enumerationErrorRecords.Count
+        enumeration_errors = @($enumerationErrorRecords)
+        read_error_count = $batReadErrorRecords.Count
+        read_errors = @($batReadErrorRecords)
         environment_line_count = @($environmentLines).Count
         environment_lines_file = $batLinesPath
         environment_lines_sample = @($environmentLines | Select-Object -First 120)
@@ -222,6 +272,9 @@ Write-Host ("Status: {0}" -f $status)
 Write-Host ("Installed package records: {0}" -f $allPackages.Count)
 Write-Host ("Selected package records: {0}" -f $selectedPackages.Count)
 Write-Host ("BAT files read: {0}" -f $batFiles.Count)
+Write-Host ("Top-level BAT files: {0}" -f $topLevelBatFiles.Count)
+Write-Host ("Skipped enumeration errors: {0}" -f $enumerationErrorRecords.Count)
+Write-Host ("BAT read/hash errors: {0}" -f $batReadErrorRecords.Count)
 Write-Host ("Relevant BAT environment lines: {0}" -f @($environmentLines).Count)
 Write-Host ("Report: {0}" -f $reportPath)
 Write-Host ("BAT lines: {0}" -f $batLinesPath)
@@ -234,6 +287,9 @@ Write-Host 'No bundled BAT file or DeepFaceLab main.py was executed.' -Foregroun
     package_count = $allPackages.Count
     selected_package_count = $selectedPackages.Count
     bat_count = $batFiles.Count
+    top_level_bat_count = $topLevelBatFiles.Count
+    enumeration_error_count = $enumerationErrorRecords.Count
+    bat_read_error_count = $batReadErrorRecords.Count
     environment_line_count = @($environmentLines).Count
 }
 
