@@ -1,8 +1,21 @@
+# The historical repository used an allow-list style ignore file.
+# Keep that behavior, but allow the new engineering files to be tracked.
 *
+!*/
 !*.py
 !*.md
 !*.txt
 !*.jpg
+!*.ps1
+!*.psd1
+!*.json
 !requirements*
 !Dockerfile*
 !*.sh
+
+# Never track local runtime profiles, generated reports, workspaces, media,
+# checkpoints, or exported identity models.
+config/local/
+artifacts/
+workspace/
+*.dfm
