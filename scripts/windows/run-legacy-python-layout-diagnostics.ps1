@@ -107,20 +107,22 @@ try {
     $process.WaitForExit()
     $process.Refresh()
     $exitCode = $process.ExitCode
+    $stdout = ''
+    $stderr = ''
 
     Write-Host ''
     Write-Host '[3/4] Staged diagnostics finished. Reading captured output...' -ForegroundColor Cyan
     Write-Host ''
 
     if (Test-Path -LiteralPath $stdoutPath -PathType Leaf) {
-        $stdout = Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue
+        $stdout = [string](Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue)
         if (-not [string]::IsNullOrWhiteSpace($stdout)) {
             Write-Host $stdout.TrimEnd()
         }
     }
 
     if (Test-Path -LiteralPath $stderrPath -PathType Leaf) {
-        $stderr = Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue
+        $stderr = [string](Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue)
         if (-not [string]::IsNullOrWhiteSpace($stderr)) {
             Write-Host ''
             Write-Host 'Captured error output:' -ForegroundColor Yellow
@@ -128,10 +130,23 @@ try {
         }
     }
 
+    if ($null -eq $exitCode) {
+        if ($stdout -match '(?m)^Status:\s*passed\s*$') {
+            $exitCode = 0
+            Write-Host ''
+            Write-Host 'Outer process exit code was unavailable; explicit passed status was used.' -ForegroundColor DarkYellow
+        }
+        else {
+            $exitCode = 1
+            Write-Host ''
+            Write-Host 'Outer process exit code was unavailable and no explicit passed status was found.' -ForegroundColor Yellow
+        }
+    }
+
     Write-Host ''
     Write-Host '[4/4] Wrapper completed.' -ForegroundColor Cyan
 
-    if ($exitCode -ne 0) { exit $exitCode }
+    if ([int]$exitCode -ne 0) { exit [int]$exitCode }
     exit 0
 }
 finally {
