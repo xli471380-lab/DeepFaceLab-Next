@@ -25,7 +25,8 @@ function Read-ProfileValue([string]$Name, [bool]$Required) {
 
 $machineId = Read-ProfileValue 'MachineId' $true
 $environmentId = Read-ProfileValue 'EnvironmentId' $true
-$role = Read-ProfileValue 'Role' $true
+$role = Read-ProfileValue 'Role' $false
+if ([string]::IsNullOrWhiteSpace($role)) { $role = 'full-development' }
 $pythonExe = Read-ProfileValue 'PythonExe' $false
 $ffmpegExe = Read-ProfileValue 'FFmpegExe' $false
 $nvccExe = Read-ProfileValue 'NvccExe' $false
@@ -34,8 +35,8 @@ $notes = Read-ProfileValue 'Notes' $false
 if ($machineId -notmatch '^[A-Za-z0-9._-]+$' -or $environmentId -notmatch '^[A-Za-z0-9._-]+$') {
     throw 'MachineId and EnvironmentId contain invalid characters.'
 }
-if ($role -notin @('engineering','baseline','performance')) {
-    throw 'Role must be engineering, baseline, or performance.'
+if ($role -notin @('full-development','engineering','baseline','performance')) {
+    throw 'Role must be full-development, engineering, baseline, or performance.'
 }
 foreach ($item in @(@('PythonExe',$pythonExe),@('FFmpegExe',$ffmpegExe),@('NvccExe',$nvccExe))) {
     if ($item[1] -and -not (Test-Path -LiteralPath $item[1] -PathType Leaf)) {
@@ -48,11 +49,12 @@ New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 $timestamp = (Get-Date).ToUniversalTime()
 $manifestPath = Join-Path $outputDirectory ("profile-manifest-{0}.json" -f $timestamp.ToString('yyyyMMddTHHmmssZ'))
 [ordered]@{
-    schema_version = 1
+    schema_version = 2
     generated_at_utc = $timestamp.ToString('o')
     machine_id = $machineId
     environment_id = $environmentId
     role = $role
+    role_note = 'Role describes this local profile or validation run, not a permanent responsibility assigned to the physical computer.'
     profile_file = $profilePathResolved
     tools = [ordered]@{ python_exe=$pythonExe; ffmpeg_exe=$ffmpegExe; nvcc_exe=$nvccExe }
     notes = $notes
@@ -67,7 +69,7 @@ try {
     $args = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$scriptPath,'-OutputDirectory',$outputDirectory)
     if ($pythonExe) { $args += @('-PythonExe',$pythonExe) }
     if (-not $DiagnosticsOnly -and $AllowDirtyTree) { $args += '-AllowDirtyTree' }
-    Write-Host "Machine: $machineId | Environment: $environmentId | Role: $role" -ForegroundColor Cyan
+    Write-Host "Machine: $machineId | Environment: $environmentId | Profile: $role" -ForegroundColor Cyan
     Write-Host "Artifacts: $outputDirectory"
     & powershell.exe @args
     $exitCode = $LASTEXITCODE
