@@ -12,10 +12,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $resolvedPackage = (Resolve-Path -LiteralPath $PackagePath).Path
 $file = Get-Item -LiteralPath $resolvedPackage -Force
 
-if (-not $file.PSIsContainer -and $file.Extension -ieq '.exe') {
-    # Expected package type.
-}
-else {
+if ($file.PSIsContainer -or $file.Extension -ine '.exe') {
     throw 'PackagePath must point to the downloaded DeepFaceLab EXE file.'
 }
 
@@ -164,22 +161,87 @@ if ($sevenZip.available) {
 
 $defender = [ordered]@{
     requested = (-not $SkipDefender.IsPresent)
-    available = $false
-    path = $null
-    exit_code = $null
-    output_file = $null
+    success = $false
+    method = $null
+    output_file = $defenderLogPath
+    computer_status = $null
+    start_mpscan = [ordered]@{
+        available = $false
+        attempted = $false
+        success = $false
+        error = $null
+    }
+    mpcmdrun = [ordered]@{
+        available = $false
+        path = $null
+        attempted = $false
+        exit_code = $null
+        output = $null
+    }
 }
 
+$defenderLogLines = New-Object System.Collections.ArrayList
 if (-not $SkipDefender.IsPresent) {
-    $defenderPath = Find-DefenderCli
-    if ($defenderPath) {
-        $defender.available = $true
-        $defender.path = $defenderPath
-        $defenderResult = Invoke-NativeCapture -Executable $defenderPath -Arguments @('-Scan', '-ScanType', '3', '-File', $resolvedPackage)
-        $defenderResult.output | Set-Content -LiteralPath $defenderLogPath -Encoding UTF8
-        $defender.exit_code = $defenderResult.exit_code
-        $defender.output_file = $defenderLogPath
+    $statusCommand = Get-Command 'Get-MpComputerStatus' -ErrorAction SilentlyContinue
+    if ($null -ne $statusCommand) {
+        try {
+            $status = Get-MpComputerStatus -ErrorAction Stop
+            $defender.computer_status = [ordered]@{
+                antivirus_enabled = $status.AntivirusEnabled
+                real_time_protection_enabled = $status.RealTimeProtectionEnabled
+                antivirus_signature_version = $status.AntivirusSignatureVersion
+                antivirus_signature_last_updated = $status.AntivirusSignatureLastUpdated
+                am_engine_version = $status.AMEngineVersion
+                am_product_version = $status.AMProductVersion
+            }
+            [void]$defenderLogLines.Add(('Defender status: AntivirusEnabled={0}; RealTimeProtectionEnabled={1}; Signature={2}' -f $status.AntivirusEnabled, $status.RealTimeProtectionEnabled, $status.AntivirusSignatureVersion))
+        }
+        catch {
+            [void]$defenderLogLines.Add(('Get-MpComputerStatus failed: {0}' -f $_.Exception.Message))
+        }
     }
+
+    $startMpScanCommand = Get-Command 'Start-MpScan' -ErrorAction SilentlyContinue
+    if ($null -ne $startMpScanCommand) {
+        $defender.start_mpscan.available = $true
+        $defender.start_mpscan.attempted = $true
+        try {
+            [void]$defenderLogLines.Add(('Start-MpScan custom scan started for: {0}' -f $resolvedPackage))
+            Start-MpScan -ScanType CustomScan -ScanPath $resolvedPackage -ErrorAction Stop
+            $defender.start_mpscan.success = $true
+            $defender.success = $true
+            $defender.method = 'Start-MpScan'
+            [void]$defenderLogLines.Add('Start-MpScan completed without an exception.')
+        }
+        catch {
+            $defender.start_mpscan.error = $_.Exception.Message
+            [void]$defenderLogLines.Add(('Start-MpScan failed: {0}' -f $_.Exception.Message))
+        }
+    }
+
+    if (-not $defender.success) {
+        $defenderPath = Find-DefenderCli
+        if ($defenderPath) {
+            $defender.mpcmdrun.available = $true
+            $defender.mpcmdrun.path = $defenderPath
+            $defender.mpcmdrun.attempted = $true
+            $defenderResult = Invoke-NativeCapture -Executable $defenderPath -Arguments @('-Scan', '-ScanType', '3', '-File', $resolvedPackage, '-ReturnHR')
+            $defender.mpcmdrun.exit_code = $defenderResult.exit_code
+            $defender.mpcmdrun.output = $defenderResult.output
+            [void]$defenderLogLines.Add(('MpCmdRun path: {0}' -f $defenderPath))
+            [void]$defenderLogLines.Add(('MpCmdRun exit code: {0}' -f $defenderResult.exit_code))
+            [void]$defenderLogLines.Add($defenderResult.output)
+            if ($defenderResult.exit_code -eq 0) {
+                $defender.success = $true
+                $defender.method = 'MpCmdRun'
+            }
+        }
+        else {
+            [void]$defenderLogLines.Add('MpCmdRun.exe was not found.')
+        }
+    }
+
+    @($defenderLogLines) | Set-Content -LiteralPath $defenderLogPath -Encoding UTF8
 }
 
 $warnings = @()
@@ -192,15 +254,12 @@ if (-not $sevenZip.available) {
 elseif ($sevenZip.test_exit_code -ne 0) {
     $warnings += ("7-Zip archive test returned exit code {0}." -f $sevenZip.test_exit_code)
 }
-if ($defender.requested -and -not $defender.available) {
-    $warnings += 'Microsoft Defender command-line scanner was not found.'
-}
-elseif ($defender.available -and $defender.exit_code -ne 0) {
-    $warnings += ("Microsoft Defender scan returned exit code {0}; inspect its log before proceeding." -f $defender.exit_code)
+if ($defender.requested -and -not $defender.success) {
+    $warnings += 'Microsoft Defender did not complete a successful custom scan. Inspect the Defender log before proceeding.'
 }
 
 $report = [ordered]@{
-    schema_version = 1
+    schema_version = 2
     generated_at_utc = $timestamp.ToString('o')
     repository_commit = (& git -C $repoRoot rev-parse HEAD 2>$null | Out-String).Trim()
     machine_id = $machineId
@@ -230,7 +289,7 @@ $report = [ordered]@{
     seven_zip = $sevenZip
     microsoft_defender = $defender
     warnings = @($warnings)
-    safety_note = 'This inspection does not execute the downloaded package. A clean local scan and valid archive structure reduce risk but do not prove authorship or complete safety.'
+    safety_note = 'This inspection does not execute the downloaded package. A successful local scan and valid archive structure reduce risk but do not prove authorship or complete safety.'
 }
 
 $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
@@ -245,13 +304,13 @@ Write-Host ("MZ executable header: {0}" -f $hasMzHeader)
 if ($sevenZip.available) {
     Write-Host ("7-Zip archive test exit code: {0}" -f $sevenZip.test_exit_code)
     Write-Host ("7-Zip entries: {0}" -f $sevenZip.entry_count)
-} else {
+}
+else {
     Write-Host '7-Zip: not found' -ForegroundColor Yellow
 }
-if ($defender.available) {
-    Write-Host ("Microsoft Defender exit code: {0}" -f $defender.exit_code)
-} elseif ($defender.requested) {
-    Write-Host 'Microsoft Defender CLI: not found' -ForegroundColor Yellow
+if ($defender.requested) {
+    Write-Host ("Microsoft Defender success: {0}" -f $defender.success)
+    Write-Host ("Microsoft Defender method: {0}" -f $defender.method)
 }
 Write-Host ("Report: {0}" -f $reportPath)
 
@@ -268,6 +327,7 @@ if (@($warnings).Count -gt 0) {
     sha256 = $hash.Hash
     signature_status = $signature.Status.ToString()
     seven_zip_test_exit_code = $sevenZip.test_exit_code
-    defender_exit_code = $defender.exit_code
+    defender_success = $defender.success
+    defender_method = $defender.method
     warning_count = @($warnings).Count
 }
