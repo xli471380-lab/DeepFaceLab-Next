@@ -33,7 +33,9 @@ Last updated: 2026-07-20
 - [x] Create the ignored `rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1` profile and pass the read-only runtime probe.
 - [x] Confirm the RTX 5880 Ada historical profile uses embedded Python 3.6.8, bundled FFmpeg successfully, and 8 bundled CUDA/cuDNN DLL records; `main.py` was not executed.
 - [x] Pass static BAT/environment inspection on RTX 5880 Ada: status `passed`, 1 package metadata record, 0 selected package records, 60 BAT files, 56 top-level BAT files, 0 enumeration errors, 0 read/hash errors, and 128 relevant environment lines.
-- [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure.
+- [x] Pass legacy Python layout inspection on RTX 5880 Ada with schema v4 strict evidence normalization: both probes completed without timeout; normal and `-S` exit codes normalized to `0` only after complete sentinel JSON validation; default `sys.path` includes `site-packages`; 138 top-level items, 65 metadata directories, 9 selected artifact groups, 56 top-level BAT files, 112 relevant launcher lines, and 0 warnings.
+- [x] Add staged progress, independent Python-probe timeouts, compact JSON reporting, separate inventory text files, and fail-closed PowerShell 5.1 exit-code handling for step 9.
+- [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure; a later TLS handshake failure also cleared on retry without disabling certificate verification.
 
 ## Verified local results
 
@@ -70,7 +72,7 @@ This system profile validates hardware and tooling only. Python 3.11, modern FFm
 
 ### `rtx5880-ada × legacy-dfl-rtx3000-20211120`
 
-Status: **historical runtime extracted; read-only probe and static BAT/environment inspection passed**.
+Status: **historical runtime extracted; read-only probe, static BAT/environment inspection, and Python layout inspection passed**.
 
 Package:
 
@@ -103,7 +105,15 @@ Observed:
 - BAT files read: `60`; top-level BAT files: `56`.
 - BAT enumeration errors: `0`; BAT read/hash errors: `0`.
 - Relevant BAT environment lines: `128`.
-- The selected-package count remains non-authoritative for this portable bundle; step 9 will inspect filesystem layout, `sys.path`, and static version files.
+- Python layout inspection schema v4 status: `passed`.
+- Normal Python path probe: no timeout; complete sentinel JSON; effective exit code `0` inferred under the strict PowerShell 5.1 compatibility rule.
+- Python `-S` path probe: no timeout; complete sentinel JSON; effective exit code `0` inferred under the same strict rule.
+- Default `sys.path` includes `Lib\site-packages`: `True`; `-S` mode includes it: `False`, as expected.
+- `site-packages` top-level items: `138`; `dist-info`/`egg-info` directories: `65`.
+- Selected dependency artifact groups found: `9`.
+- Top-level BAT files inspected by step 9: `56`; relevant launcher lines: `112`.
+- Step 9 warnings: `0`.
+- Normalized local report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\python-layout-inspection\legacy-python-layout-inspection-v4-20260720T123721Z.json`.
 - DeepFaceLab `main.py`, bundled launcher BAT files, TensorFlow imports, and training were not executed.
 
 The active-antivirus scan result for the extracted directory has not yet been recorded in the project progress and must not be assumed.
@@ -129,8 +139,6 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 ## In progress
 
 - [ ] Record the active-antivirus scan result for `D:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` on the RTX 5880 Ada computer.
-- [ ] Run parameterized step 9 against `rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1`.
-- [ ] Review embedded Python `sys.path`, `._pth`, `site-packages`, selected package artifacts, static versions, and launcher environment lines.
 - [ ] Complete step 9 on `hp-a2000` when that computer is used again.
 - [ ] Build a controlled TensorFlow/CUDA/GPU visibility probe from the confirmed bundle path setup.
 - [ ] Prepare a small authorized, non-public test dataset.
@@ -139,10 +147,10 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 ## Next local work on RTX 5880 Ada
 
 1. Confirm and record the active-antivirus scan result for the extracted directory.
-2. Pull the progress update.
-3. Run parameterized step 9 using the RTX 5880 Ada historical profile.
-4. Review the Python layout report before importing TensorFlow.
-5. Do not run bundled launcher BAT files, DeepFaceLab `main.py`, TensorFlow imports, or training yet.
+2. Pull this progress update.
+3. Add and review a separate controlled TensorFlow/CUDA/GPU visibility probe with strict timeout, process-tree termination, captured logs, and no intentional workspace modification.
+4. Run that probe only after its safety boundaries are reviewed.
+5. Do not start extraction, training, merge, or DFM export until the controlled visibility probe is understood.
 
 ## Known risks
 
@@ -153,6 +161,7 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 - The portable bundle may have stripped or nonstandard Python package metadata, so pip/pkg_resources output alone cannot establish dependency presence.
 - Compatibility may differ between RTX A2000 compute capability 8.6 and RTX 5880 Ada compute capability 8.9.
 - System CUDA 13.x and cuDNN 9.x on the second computer must remain isolated from the historical portable runtime.
+- TensorFlow import may load old bundled native DLLs and can fail or hang on Ada compute capability 8.9; it must be isolated behind a strict timeout before any workflow execution.
 - P0 cannot be accepted from import tests alone; a real save/resume, merge, export, and DFM-load workflow is required.
 
 ## Milestone status
