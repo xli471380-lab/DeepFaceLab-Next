@@ -9,6 +9,7 @@
 !*.ps1
 !*.psd1
 !*.json
+!*.bat
 !requirements*
 !Dockerfile*
 !*.sh
