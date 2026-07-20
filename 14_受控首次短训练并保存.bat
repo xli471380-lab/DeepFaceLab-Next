@@ -35,6 +35,7 @@ echo - requires the passed step-13 extraction marker
 echo - requires your visual review of all six aligned faces
 echo - requires the final model directory to be empty
 echo - writes to a temporary model directory first
+echo - uses deterministic scripted prompt answers
 echo - validates checkpoint files, options, iteration, and losses
 echo - checks aligned hashes, historical workspace, and Git status
 echo - removes only generated temporary model output if blocked
@@ -64,7 +65,7 @@ if /i not "%CONFIRM%"=="VISUAL-REVIEW-PASSED" (
 )
 
 echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\run-p0-initial-training-save-gate.ps1" -ProfilePath "%PROFILE%" -WorkspaceRoot "%WORKSPACE%" -VisualReviewConfirmed
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\run-p0-initial-training-save-gate-v2.ps1" -ProfilePath "%PROFILE%" -WorkspaceRoot "%WORKSPACE%" -VisualReviewConfirmed
 set "RC=%ERRORLEVEL%"
 
 echo.
