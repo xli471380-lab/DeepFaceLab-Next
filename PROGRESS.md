@@ -18,27 +18,16 @@ Last updated: 2026-07-20
 - [x] Define the staged modernization roadmap, P0 protocol, security policy, and branch workflow.
 - [x] Add PowerShell 5.1-compatible diagnostics, profile-driven acceptance, per-profile artifacts, and safe computer-switch BAT files.
 - [x] Pass the system-profile scaffold on `hp-a2000 × system-py312`.
-- [x] Confirm no reusable historical DeepFaceLab portable bundle was already installed.
-- [x] Obtain the upstream-linked RTX 3000 Windows package without executing it.
-- [x] Record package size, SHA-256, unsigned status, and 7-Zip SFX metadata.
-- [x] Install 7-Zip 26.02 from the verified WinGet package.
-- [x] List and integrity-test the downloaded SFX without running it.
-- [x] Diagnose Microsoft Defender as inactive because Huorong is the active protection provider.
-- [x] Confirm Huorong Security 6.0.11.1 is active through `HipsDaemon`, `HipsTray`, and `HRWSCCtrl`.
-- [x] Run Huorong custom scan against the downloaded package folder: `0` risks.
-- [x] Run Microsoft Safety Scanner custom scan against the downloaded package folder: `No infection found`, return code `0`.
-- [x] Confirm the package SHA-256 remained unchanged after scanning.
-- [x] Add guarded extraction tooling that verifies the expected hash, rejects unsafe archive paths, tests integrity, extracts outside the repository, and writes an inventory.
-- [x] Fix 7-Zip metadata parsing so the SFX path itself is not misclassified as an archive entry.
-- [x] Extract the verified SFX with 7-Zip without executing it.
-- [x] Scan the extracted runtime with Huorong: `74941` objects, `0` risks.
-- [x] Confirm a plausible DeepFaceLab portable runtime structure with embedded Python, FFmpeg, `_internal`, `main.py`, and `workspace`.
-- [x] Create an ignored local historical runtime profile.
-- [x] Pass the read-only Python/FFmpeg/NVIDIA/CUDA-DLL probe without running `main.py`.
-- [x] Add static BAT/environment inspection that does not execute BAT files, TensorFlow, or DeepFaceLab.
-- [x] Fix recursive BAT enumeration so inaccessible historical TensorFlow include-tree paths are recorded and skipped instead of aborting the inspection.
-- [x] Pass static BAT/environment inspection: 60 BAT files, 56 top-level BAT files, 1 skipped enumeration path, 0 BAT read/hash errors, and 128 relevant environment lines.
-- [x] Add a dedicated legacy Python layout inspection for `._pth`, `sys.path`, `site-packages`, package folders, static version files, and launcher BAT text.
+- [x] Obtain, fingerprint, scan, integrity-test, and safely extract the upstream-linked RTX 3000 historical Windows package without executing its SFX.
+- [x] Confirm a plausible portable runtime structure with embedded Python, FFmpeg, `_internal`, DeepFaceLab `main.py`, and `workspace`.
+- [x] Pass the historical runtime read-only probe on `hp-a2000` without executing `main.py` or starting training.
+- [x] Pass static BAT/environment inspection on `hp-a2000`: 60 BAT files, 56 top-level BAT files, 1 skipped include-tree path, 0 read/hash errors, and 128 relevant environment lines.
+- [x] Add dedicated legacy Python layout inspection for `._pth`, `sys.path`, `site-packages`, package folders, static version files, and launcher BAT text.
+- [x] Synchronize the second computer to `agent/p0-reproducible-baseline` and create the ignored `rtx5880-ada × system-py311` profile.
+- [x] Complete second-computer system diagnostics with zero warnings.
+- [x] Scan fixed drives `C:\`, `D:\`, and `E:\` on the RTX 5880 Ada computer; find 2 candidates but 0 reusable historical portable bundles.
+- [x] Fix discovery input so blank input or `ALL` selects all fixed drives, while explicit roots are parsed without CMD/PowerShell pipe escaping errors.
+- [x] Parameterize steps 6–9 so package paths, extraction destinations, machine IDs, environment IDs, and local profile paths can differ between computers.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure.
 
 ## Verified local results
@@ -54,9 +43,29 @@ Status: **environment scaffold passed**.
 - System Python 3.12.10 probe passed.
 - No workspace, artifacts, or DFM files are tracked.
 
-This validates the system profile and repository tooling only; it is not the historical DeepFaceLab baseline.
+### `rtx5880-ada × system-py311`
 
-### Downloaded historical package
+Status: **system diagnostics complete with zero warnings**.
+
+- Computer: `DESKTOP-84BCCU9`; ASUS system.
+- Windows 11 Home Chinese edition, build 26200; PowerShell 5.1.26100.8875.
+- Intel Core i5-12600KF; 10 cores / 16 logical processors.
+- Physical memory: approximately 63.8 GB.
+- NVIDIA RTX 5880 Ada Generation; 46068 MiB VRAM.
+- NVIDIA driver 582.16; compute capability 8.9.
+- System Python profile: Python 3.11.9 at `C:\Users\newAda\AppData\Local\Programs\Python\Python311\python.exe`.
+- Python launcher also sees Python 3.10, 3.12, and 3.13.
+- System FFmpeg is available at `C:\ffmpeg_latest\bin\ffmpeg.exe`.
+- System `nvcc` is CUDA 13.1 at `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.1\bin\nvcc.exe`.
+- Environment variables also reference CUDA 13.0/13.3 and cuDNN for CUDA 12.9. These modern system components must not be substituted for the self-contained historical P0 runtime.
+- Repository branch and commit were correct and the working tree was clean.
+- Fixed-drive runtime discovery searched `C:\`, `D:\`, and `E:\`; candidates: 2; likely portable bundles: 0.
+
+This system profile validates hardware and tooling only. Python 3.11, modern FFmpeg, CUDA 13.x, and system cuDNN are not the historical DeepFaceLab runtime.
+
+## Historical package baseline verified on `hp-a2000`
+
+Original package:
 
 ```text
 F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_series_build_11_20_2021.exe
@@ -66,105 +75,66 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 - SHA-256: `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
 - Authenticode: `NotSigned`.
 - SFX stub metadata: 7-Zip 19.00.
-- Archive integrity test: exit code `0`.
-- Raw 7-Zip `Path =` values: `29099`.
+- Archive integrity test exit code: `0`.
 - Real archive entries validated: `29098`.
 - Huorong package-folder scan: `0` risks.
 - Microsoft Safety Scanner custom scan: `No infection found`, return code `0`.
-- The upstream-linked mirrors did not provide a published checksum or signature for this exact EXE. The recorded hash is a stable local fingerprint, not proof of authorship.
+- The hash is a stable local fingerprint, not proof of publisher identity.
 
-### Extracted historical runtime
-
-Extraction destination:
-
-```text
-F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120
-```
-
-Portable runtime root:
+Extracted runtime on `hp-a2000`:
 
 ```text
 F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series
 ```
 
-Extraction result:
-
-- Expected SHA-256 matched: `True`.
-- Archive integrity test exit code: `0`.
-- Extraction exit code: `0`.
 - Extracted files: `23376`.
 - Extracted directories: `5722`.
 - Extracted size: `8146405202` bytes.
-- BAT files: `60`; EXE files: `67`; DLL files: `365`; Python files: `7315`.
-- Huorong extracted-runtime scan: `74941` objects, `0` risks, `0` processed.
+- Huorong extracted-runtime scan: `74941` objects, `0` risks.
+- Embedded Python: 3.6.8, 64-bit.
+- Bundled FFmpeg: 4.2.1.
+- Bundled CUDA/cuDNN DLL records: 8.
+- RTX A2000 was visible to `nvidia-smi`; TensorFlow/GPU import is not yet accepted.
 
-Confirmed paths:
+## Cross-computer transfer decision
 
-```text
-Python:
-F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\_internal\python-3.6.8\python.exe
+The RTX 5880 Ada computer has no reusable historical bundle. The preferred transfer artifact is the already fingerprinted original 3.9 GB package rather than the 8.1 GB extracted directory because it is smaller and can be independently re-hashed, scanned, integrity-tested, and safely extracted on the second computer.
 
-FFmpeg:
-F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\_internal\ffmpeg\ffmpeg.exe
-
-DeepFaceLab main.py:
-F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\_internal\DeepFaceLab\main.py
-
-Workspace:
-F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\workspace
-```
-
-### Read-only runtime probe
-
-- Local ignored profile:
-  `config\local\hp-a2000-legacy-dfl-rtx3000-20211120.psd1`.
-- Status: `passed`.
-- Embedded Python: `3.6.8`, 64-bit.
-- FFmpeg: `4.2.1`.
-- GPU: `NVIDIA RTX A2000`, driver `581.80`, 5754 MiB, compute capability `8.6`.
-- Bundled CUDA/cuDNN records: `8`.
-- Observed DLLs include CUDA 10.1/11 runtime components, cuBLAS 11, cuSolver 11, cuSparse 11, and cuDNN 8.
-- `main.py` was not executed; training was not started; workspace was not intentionally modified.
-
-### Static environment inspection
-
-- Status: `passed`.
-- BAT files read: `60`.
-- Top-level BAT files: `56`.
-- Skipped enumeration errors: `1`.
-- BAT read/hash errors: `0`.
-- Relevant environment lines: `128`.
-- The skipped path is in a historical TensorFlow/cuDNN frontend include tree and is irrelevant to BAT inspection.
-- `pkg_resources` reported only one distribution record and zero selected package records even though TensorFlow package directories are visibly present. Therefore pip/pkg_resources metadata is not authoritative for this portable bundle.
-- The likely explanations are stripped distribution metadata or a bundle-specific Python path layout. This must be resolved through filesystem and `sys.path` inspection before TensorFlow import.
+Do not copy the `hp-a2000` local profile. The RTX 5880 Ada computer must create its own local historical-runtime profile after extraction.
 
 ## In progress
 
-- [ ] Pull and run `9_诊断历史Python依赖布局.bat`.
-- [ ] Record embedded Python `sys.path`, `._pth` files, `site-packages` visibility, package directories, static version files, and launcher environment lines.
-- [ ] Build a separate controlled TensorFlow/CUDA/GPU visibility probe using the confirmed bundle path setup.
+- [ ] Transfer the verified historical package to the RTX 5880 Ada computer through a trusted local medium or private network path.
+- [ ] Recalculate SHA-256 on the destination and require an exact match before extraction.
+- [ ] Scan the transferred package with the active antivirus on the RTX 5880 Ada computer.
+- [ ] Install or verify 7-Zip locally, then use parameterized step 6 to extract outside the repository.
+- [ ] Scan the extracted directory before executing any included file.
+- [ ] Use parameterized step 7 to create `rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1` and run the read-only probe.
+- [ ] Run parameterized steps 8 and 9 against the RTX 5880 Ada historical profile.
+- [ ] Complete step 9 on `hp-a2000` when that computer is used again.
+- [ ] Build a controlled TensorFlow/CUDA/GPU visibility probe from the confirmed bundle path setup.
 - [ ] Prepare a small authorized, non-public test dataset.
 - [ ] Execute face extraction, short training, save/exit, resume, merge, DFM export, and VisoMaster Fusion loading.
-- [ ] Reproduce the accepted baseline on the second computer later without blocking current work.
 
-## Next local acceptance work
+## Next local work on RTX 5880 Ada
 
-1. Pull the latest branch with HTTP/1.1.
-2. Run `9_诊断历史Python依赖布局.bat` and type `DIAGNOSE`.
-3. Review `legacy-python-layout-inspection-*.json`.
-4. Confirm whether `Lib\site-packages` is on default `sys.path`, what `._pth` files contain, and which selected package folders/version files exist.
-5. Do not run bundled BAT files, TensorFlow import, or `main.py` yet.
-6. Add and run a separate controlled TensorFlow/CUDA/GPU probe after the layout report is accepted.
+1. Pull the latest branch containing parameterized cross-computer BAT files.
+2. Confirm at least 15 GB free on the chosen destination drive.
+3. Copy only the verified original package from the first computer.
+4. Verify the destination SHA-256 exactly matches the recorded fingerprint.
+5. Scan the copied package folder with the active antivirus.
+6. Run parameterized step 6 with explicit local package and destination paths.
+7. Do not run extracted BAT, EXE, Python, or `main.py` until the extracted directory has also been scanned.
 
 ## Known risks
 
-- The inherited historical stack contains old Python, TensorFlow, CUDA, cuDNN, NumPy, SciPy, h5py, OpenCV, ONNX, and tf2onnx components.
+- The historical stack contains old Python, TensorFlow, CUDA, cuDNN, NumPy, SciPy, h5py, OpenCV, ONNX, and tf2onnx components.
 - Modern Python/CUDA upgrades may break binary compatibility, checkpoint behavior, numerical output, or DFM export.
-- The downloaded EXE is unsigned and has no located official published checksum.
+- The downloaded EXE is unsigned and no official published checksum was located.
 - Clean local scans reduce risk but do not prove publisher identity or absolute safety.
-- Huorong is the active antivirus provider; Defender scan failures are expected while Huorong remains active.
 - The portable bundle may have stripped or nonstandard Python package metadata, so pip/pkg_resources output alone cannot establish dependency presence.
-- Historical TensorFlow/CUDA compatibility may differ between the RTX A2000 and RTX 5880 Ada systems.
+- Compatibility may differ between RTX A2000 compute capability 8.6 and RTX 5880 Ada compute capability 8.9.
+- System CUDA 13.x and cuDNN 9.x on the second computer must remain isolated from the historical portable runtime.
 - P0 cannot be accepted from import tests alone; a real save/resume, merge, export, and DFM-load workflow is required.
 
 ## Milestone status
