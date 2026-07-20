@@ -24,6 +24,19 @@ if (-not [string]::IsNullOrWhiteSpace($ProfilePath)) {
     }
 }
 
+function Convert-ToHex32 {
+    param([long]$Value)
+
+    $normalized = if ($Value -lt 0) {
+        [uint64]($Value + 4294967296)
+    }
+    else {
+        [uint64]$Value
+    }
+
+    return ('0x{0:X8}' -f $normalized)
+}
+
 function Find-DefenderCli {
     $platformRoot = Join-Path $env:ProgramData 'Microsoft\Windows Defender\Platform'
     if (Test-Path -LiteralPath $platformRoot -PathType Container) {
@@ -55,7 +68,7 @@ function Invoke-NativeCapture {
         $exitCode = $LASTEXITCODE
         return [ordered]@{
             exit_code = $exitCode
-            exit_code_hex = ('0x{0:X8}' -f ([uint32]$exitCode))
+            exit_code_hex = Convert-ToHex32 -Value $exitCode
             output = ($lines -join [Environment]::NewLine).Trim()
         }
     }
@@ -167,7 +180,7 @@ if ($null -ne $startMpScanCommand) {
         $startMpScan.fully_qualified_error_id = $_.FullyQualifiedErrorId
         $startMpScan.category_info = $_.CategoryInfo.ToString()
         $startMpScan.hresult_decimal = $exception.HResult
-        $startMpScan.hresult_hex = ('0x{0:X8}' -f ([uint32]$exception.HResult))
+        $startMpScan.hresult_hex = Convert-ToHex32 -Value $exception.HResult
         [void]$log.Add(('Start-MpScan failed: {0}' -f $exception.Message))
         [void]$log.Add(('Error type: {0}; FQID: {1}; HResult: {2}' -f $startMpScan.error_type, $startMpScan.fully_qualified_error_id, $startMpScan.hresult_hex))
     }
@@ -242,7 +255,7 @@ else {
 }
 
 $report = [ordered]@{
-    schema_version = 1
+    schema_version = 2
     generated_at_utc = $timestamp.ToString('o')
     repository_commit = (& git -C $repoRoot rev-parse HEAD 2>$null | Out-String).Trim()
     machine_id = $machineId
@@ -279,6 +292,7 @@ if ($status) {
 Write-Host ("Start-MpScan success: {0}" -f $startMpScan.success)
 if ($startMpScan.error_message) {
     Write-Host ("Start-MpScan error: {0}" -f $startMpScan.error_message) -ForegroundColor Yellow
+    Write-Host ("Start-MpScan HResult: {0}" -f $startMpScan.hresult_hex) -ForegroundColor Yellow
 }
 if ($mpCmdRun.attempted) {
     Write-Host ("MpCmdRun exit: {0} ({1})" -f $mpCmdRun.exit_code, $mpCmdRun.exit_code_hex)
