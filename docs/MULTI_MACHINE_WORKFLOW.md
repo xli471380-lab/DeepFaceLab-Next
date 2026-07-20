@@ -1,62 +1,68 @@
 # Multi-machine development workflow
 
-DeepFaceLab-Next treats hardware and runtime as separate dimensions:
+DeepFaceLab-Next uses two computers as equal, complete development nodes. They share the same repository, branches, roadmap, and acceptance requirements, while keeping their local runtimes and generated data independent.
+
+The correct model is:
 
 ```text
-machine profile × environment profile = one acceptance result
+same development work
++ independent local clone
++ independent runtime profile
++ independent artifacts and training data
 ```
 
-Do not describe a result as belonging only to a computer. The same computer can have a system Python environment, a historical DeepFaceLab bundle, and a future modernized runtime with different compatibility and performance.
+A physical computer is never assigned a permanent project responsibility. Hardware differences may affect what can run efficiently, but they do not define which development work that computer is allowed to perform.
 
-## Known maintainer machines
+## Shared project state
 
-### `hp-a2000`
+Both computers use:
 
-- Windows 11 Pro, PowerShell 5.1
-- Intel Core i5-12500
-- About 16 GB RAM
-- NVIDIA RTX A2000, about 6 GB VRAM reported by `nvidia-smi`
-- Current system environment: Python 3.12; FFmpeg, nvcc, CUDA and cuDNN are not exposed on PATH
+- Repository: `xli471380-lab/DeepFaceLab-Next`
+- The same remote branches and pull requests
+- The same `DEVELOPMENT_PLAN.md`, `PROGRESS.md`, and `NEXT_CHAT_CONTEXT.md`
+- The same source commit for any comparison or acceptance run
 
-Primary role: `engineering`.
+GitHub is the synchronization boundary for source code and documentation. Virtual environments, CUDA runtimes, datasets, checkpoints, DFM files, generated reports, and media are not synchronized through Git.
 
-Use it for PowerShell 5.1 compatibility, repository work, diagnostics, CPU tests, low-VRAM behavior, extraction tests, and a minimal training smoke test. Its system Python 3.12 environment is not the historical DeepFaceLab baseline.
+## Independent local state
 
-### `rtx5880-ada`
+Each computer keeps its own:
 
-- NVIDIA RTX 5880 Ada Generation
-- About 46 GB VRAM
-- About 64 GB RAM
-- A known ComfyUI environment uses Python 3.13 and PyTorch with CUDA 13
+- Repository working directory
+- Python or portable runtime
+- CUDA/cuDNN/TensorRT installation or bundled runtime
+- FFmpeg path
+- `config/local/*.psd1` profile files
+- `artifacts/` reports
+- `workspace/` data
+- Checkpoints and exported DFM files
 
-Primary role: `performance`.
+The same physical computer can also have multiple independent environment profiles, such as:
 
-Use it for full training, high-resolution experiments, performance measurements, DFM export, and long-running GPU acceptance. The existing ComfyUI Python/CUDA environment must not be reused as the DeepFaceLab baseline; create a separate environment profile for the historical runtime.
+```text
+hp-a2000 × system-py312
+hp-a2000 × legacy-dfl-baseline
+rtx5880-ada × comfyui-py313-cu130
+rtx5880-ada × legacy-dfl-baseline
+```
 
 ## Profile naming
 
 Use stable, non-personal labels:
 
 ```text
-MachineId: hp-a2000
-EnvironmentId: system-py312
-Role: engineering
+MachineId = 'hp-a2000'
+EnvironmentId = 'system-py312'
+Role = 'full-development'
 ```
 
 ```text
-MachineId: rtx5880-ada
-EnvironmentId: system-cu130
-Role: performance
+MachineId = 'rtx5880-ada'
+EnvironmentId = 'legacy-dfl-baseline'
+Role = 'full-development'
 ```
 
-Later historical runtime profiles should be separate:
-
-```text
-hp-a2000 × legacy-dfl-baseline
-rtx5880-ada × legacy-dfl-baseline
-```
-
-Never compare speed or quality results unless both the source commit and environment profile are recorded.
+`Role` labels the current local profile or validation purpose. It does not assign permanent duties to a computer. Older values such as `engineering`, `baseline`, and `performance` remain accepted for compatibility, but new profiles should normally use `full-development`.
 
 ## Local profile files
 
@@ -66,44 +72,75 @@ Recommended filenames:
 
 ```text
 config/local/hp-a2000-system-py312.psd1
-config/local/rtx5880-system-cu130.psd1
 config/local/hp-a2000-legacy-dfl.psd1
+config/local/rtx5880-comfyui-py313-cu130.psd1
 config/local/rtx5880-legacy-dfl.psd1
 ```
 
-The first two describe existing system environments. They are useful for diagnostics but do not prove DeepFaceLab compatibility. The latter two will be created only after the historical runtime is identified.
+These files describe local paths and environments only. They must not contain project decisions that need to be shared between computers.
 
 ## Artifact layout
 
-Reports must be kept separate:
+Reports remain separated by machine and environment:
 
 ```text
 artifacts/p0/hp-a2000/system-py312/
-artifacts/p0/rtx5880-ada/system-cu130/
 artifacts/p0/hp-a2000/legacy-dfl-baseline/
+artifacts/p0/rtx5880-ada/comfyui-py313-cu130/
 artifacts/p0/rtx5880-ada/legacy-dfl-baseline/
 ```
 
 Do not commit these directories. Reports may contain usernames and local paths and must be redacted before sharing.
 
+## Switching computers
+
+Before leaving computer A:
+
+```powershell
+git status
+git add <reviewed-files>
+git commit -m "descriptive message"
+git push origin <current-branch>
+```
+
+Also update shared progress/context files when the development state changed.
+
+After moving to computer B:
+
+```powershell
+git fetch origin
+git switch <current-branch>
+git pull --ff-only
+git status
+```
+
+Do not carry uncommitted source changes between computers by copying folders or cloud-syncing the repository. Commit and push them first.
+
+## Sequential and parallel development
+
+When only one computer is being used at a time, both may work on the same feature branch sequentially.
+
+When both computers are used simultaneously, use separate branches, for example:
+
+```text
+agent/p0-runtime-discovery-a2000
+agent/p0-runtime-discovery-rtx5880
+```
+
+Merge them through reviewed pull requests. Do not let two computers rewrite the same branch history.
+
 ## Acceptance policy
 
-P0 requires one complete end-to-end historical baseline first. It does not require both machines to pass before development can continue.
+Both computers may perform every project task:
 
-Recommended order:
+- Script and installer development
+- Dependency and compatibility investigation
+- Extraction and training tests
+- Save/resume validation
+- Merge and DFM export
+- Performance and stability measurements
+- Documentation and pull-request work
 
-1. Make scripts pass on `hp-a2000` because Windows PowerShell 5.1 exposes compatibility bugs quickly.
-2. Identify and verify one historical DeepFaceLab runtime.
-3. Complete extraction, short training, save/resume, merge and DFM export on the most suitable machine.
-4. Re-run the same source commit and runtime profile on the second machine where practical.
-5. Record hardware-specific differences without treating them as code regressions.
+A result is valid only for the recorded combination of source commit, machine profile, environment profile, and test parameters. Hardware-specific limits are recorded as environment facts, not as permanent work assignments.
 
-## Role boundaries
-
-| Role | Purpose | Required evidence |
-|---|---|---|
-| engineering | scripts, diagnostics, compatibility, low-resource behavior | repository and machine checks |
-| baseline | frozen historical end-to-end workflow | extraction through DFM consumer load |
-| performance | speed, VRAM, resolution and long-run stability | comparable settings and measured reports |
-
-A machine may have more than one role through different profiles.
+P0 requires one complete end-to-end historical baseline first. The second computer can reproduce the same baseline later, but it is not required to be physically available before development continues.
