@@ -27,17 +27,17 @@ if ($MaxDepth -lt 1 -or $MaxDepth -gt 8) {
     throw 'MaxDepth must be between 1 and 8.'
 }
 
-if ($null -eq $SearchRoots -or $SearchRoots.Count -eq 0) {
+if ($null -eq $SearchRoots -or @($SearchRoots).Count -eq 0) {
     $SearchRoots = @(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object { $_.DeviceID + '\' })
 }
 
 $validRoots = @()
-foreach ($root in $SearchRoots) {
+foreach ($root in @($SearchRoots)) {
     if (Test-Path -LiteralPath $root -PathType Container) {
         $validRoots += (Resolve-Path -LiteralPath $root).Path
     }
 }
-if ($validRoots.Count -eq 0) {
+if (@($validRoots).Count -eq 0) {
     throw 'No valid search roots were found.'
 }
 
@@ -80,7 +80,7 @@ function Get-FileMatches {
             $matches += (Resolve-Path -LiteralPath $candidate).Path
         }
     }
-    return $matches
+    return @($matches)
 }
 
 function Get-PythonVersionSafe {
@@ -88,13 +88,35 @@ function Get-PythonVersionSafe {
     if ([string]::IsNullOrWhiteSpace($PythonPath) -or -not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
         return $null
     }
+    $previousPreference = $ErrorActionPreference
     try {
-        $output = & $PythonPath --version 2>&1 | ForEach-Object { $_.ToString() }
+        $ErrorActionPreference = 'Continue'
+        $output = @(& $PythonPath --version 2>&1 | ForEach-Object { $_.ToString() })
         return ($output -join ' ').Trim()
     }
     catch {
         return $_.Exception.Message
     }
+    finally {
+        $ErrorActionPreference = $previousPreference
+    }
+}
+
+function Test-SourceStructure {
+    param([string]$Path)
+    return (
+        (Test-Path -LiteralPath (Join-Path $Path 'main.py') -PathType Leaf) -and
+        (Test-Path -LiteralPath (Join-Path $Path 'core') -PathType Container) -and
+        (Test-Path -LiteralPath (Join-Path $Path 'models') -PathType Container)
+    )
+}
+
+function Test-PortableBundleStructure {
+    param([string]$Path)
+    return (
+        (Test-Path -LiteralPath (Join-Path $Path '_internal') -PathType Container) -and
+        (Test-Path -LiteralPath (Join-Path $Path 'workspace') -PathType Container)
+    )
 }
 
 $candidatePattern = '(?i)(deep[ _.-]*face[ _.-]*lab|deepfacelab|^dfl($|[ _.-]))'
@@ -103,18 +125,22 @@ foreach ($root in $validRoots) {
     $queue.Enqueue([PSCustomObject]@{ Path = $root; Depth = 0 })
 }
 
-$seen = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-$candidatePaths = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+$seen = @{}
+$candidatePaths = @{}
 
 while ($queue.Count -gt 0) {
     $item = $queue.Dequeue()
-    if (-not $seen.Add($item.Path)) { continue }
+    if ($seen.ContainsKey($item.Path)) { continue }
+    $seen[$item.Path] = $true
 
     $directoryInfo = Get-Item -LiteralPath $item.Path -Force -ErrorAction SilentlyContinue
     if ($null -eq $directoryInfo) { continue }
 
-    if ($directoryInfo.Name -match $candidatePattern) {
-        [void]$candidatePaths.Add($directoryInfo.FullName)
+    $nameMatch = $directoryInfo.Name -match $candidatePattern
+    $sourceStructure = Test-SourceStructure -Path $directoryInfo.FullName
+    $portableStructure = Test-PortableBundleStructure -Path $directoryInfo.FullName
+    if ($nameMatch -or $sourceStructure -or $portableStructure) {
+        $candidatePaths[$directoryInfo.FullName] = $true
     }
 
     if ($item.Depth -ge $MaxDepth) { continue }
@@ -126,7 +152,7 @@ while ($queue.Count -gt 0) {
 }
 
 $results = @()
-foreach ($candidatePath in @($candidatePaths | Sort-Object)) {
+foreach ($candidatePath in @($candidatePaths.Keys | Sort-Object)) {
     $pythonMatches = Get-FileMatches -Path $candidatePath -RelativeCandidates @(
         '_internal\python-3.6.8\python.exe',
         '_internal\python-3.7.6\python.exe',
@@ -142,7 +168,7 @@ foreach ($candidatePath in @($candidatePaths | Sort-Object)) {
         'ffmpeg.exe'
     )
     $markerMatches = @()
-    foreach ($marker in @('main.py','requirements-cuda.txt','workspace','_internal')) {
+    foreach ($marker in @('main.py','requirements-cuda.txt','workspace','_internal','core','models')) {
         $markerPath = Join-Path $candidatePath $marker
         if (Test-Path -LiteralPath $markerPath) {
             $markerMatches += (Resolve-Path -LiteralPath $markerPath).Path
@@ -158,13 +184,14 @@ foreach ($candidatePath in @($candidatePaths | Sort-Object)) {
 
     $score = 0
     if ($candidatePath -match $candidatePattern) { $score += 2 }
-    if ($pythonMatches.Count -gt 0) { $score += 3 }
-    if ($ffmpegMatches.Count -gt 0) { $score += 2 }
-    if ($markerMatches.Count -gt 0) { $score += $markerMatches.Count }
-    if ($batchFiles.Count -ge 3) { $score += 2 }
+    if (Test-SourceStructure -Path $candidatePath) { $score += 3 }
+    if (Test-PortableBundleStructure -Path $candidatePath) { $score += 4 }
+    if (@($pythonMatches).Count -gt 0) { $score += 3 }
+    if (@($ffmpegMatches).Count -gt 0) { $score += 2 }
+    if (@($batchFiles).Count -ge 3) { $score += 2 }
 
     $pythonDetails = @()
-    foreach ($pythonPath in $pythonMatches) {
+    foreach ($pythonPath in @($pythonMatches)) {
         $pythonDetails += [PSCustomObject]@{
             path = $pythonPath
             version = Get-PythonVersionSafe -PythonPath $pythonPath
@@ -174,13 +201,21 @@ foreach ($candidatePath in @($candidatePaths | Sort-Object)) {
     $results += [PSCustomObject]@{
         path = $candidatePath
         score = $score
-        likely_legacy_bundle = ($score -ge 6)
-        python = $pythonDetails
-        ffmpeg = $ffmpegMatches
-        markers = $markerMatches
-        batch_files = $batchFiles
+        likely_legacy_bundle = ($score -ge 8)
+        source_checkout = (Test-SourceStructure -Path $candidatePath)
+        portable_bundle = (Test-PortableBundleStructure -Path $candidatePath)
+        python = @($pythonDetails)
+        ffmpeg = @($ffmpegMatches)
+        markers = @($markerMatches)
+        batch_files = @($batchFiles)
     }
 }
+
+$sortedResults = @(
+    $results | Sort-Object -Property `
+        @{ Expression = 'score'; Descending = $true }, `
+        @{ Expression = 'path'; Descending = $false }
+)
 
 $timestamp = (Get-Date).ToUniversalTime()
 $outputDirectory = Join-Path $repoRoot ("artifacts\p0\{0}\{1}\runtime-discovery" -f $machineId, $environmentId)
@@ -188,16 +223,16 @@ New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 $outputPath = Join-Path $outputDirectory ("legacy-runtime-discovery-{0}.json" -f $timestamp.ToString('yyyyMMddTHHmmssZ'))
 
 $report = [ordered]@{
-    schema_version = 1
+    schema_version = 2
     generated_at_utc = $timestamp.ToString('o')
     repository_commit = (& git -C $repoRoot rev-parse HEAD 2>$null | Out-String).Trim()
     machine_id = $machineId
     environment_id = $environmentId
-    search_roots = $validRoots
+    search_roots = @($validRoots)
     max_depth = $MaxDepth
-    candidate_count = @($results).Count
-    likely_bundle_count = @($results | Where-Object { $_.likely_legacy_bundle }).Count
-    candidates = @($results | Sort-Object score -Descending, path)
+    candidate_count = @($sortedResults).Count
+    likely_bundle_count = @($sortedResults | Where-Object { $_.likely_legacy_bundle }).Count
+    candidates = @($sortedResults)
     safety_note = 'The scan only reads directory metadata and runs python.exe --version for discovered embedded interpreters. It does not run BAT files or install software.'
 }
 
@@ -213,7 +248,7 @@ Write-Host ("Report: {0}" -f $outputPath)
 if ($report.likely_bundle_count -gt 0) {
     Write-Host ''
     Write-Host 'Likely reusable bundles:' -ForegroundColor Cyan
-    $results | Where-Object { $_.likely_legacy_bundle } | Sort-Object score -Descending | ForEach-Object {
+    $sortedResults | Where-Object { $_.likely_legacy_bundle } | ForEach-Object {
         Write-Host ("- [{0}] {1}" -f $_.score, $_.path)
     }
 }
