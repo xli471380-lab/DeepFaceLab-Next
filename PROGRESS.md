@@ -39,6 +39,9 @@ Last updated: 2026-07-20
 - [x] Keep step 10 fail closed: only a successful TensorFlow import plus visible GPU evidence and an unchanged workspace can pass; no `main.py`, bundled BAT, tensor workload, model, training, merge, or export is started.
 - [x] Record the user's explicit step-10 confirmation that the extracted RTX 5880 Ada runtime directory was scanned by the active antivirus with zero risks before TensorFlow import.
 - [x] Pass step 10 on RTX 5880 Ada: TensorFlow 2.6.0 imported, CUDA build confirmed, 1 physical GPU and 1 local GPU enumerated, no timeout, effective exit code `0`, 10 bundled CUDA/cuDNN DLL files selected, 7 isolated PATH entries, and workspace unchanged.
+- [x] Add `P0_E2E_TEST_PLAN.md` with authorization, privacy, extraction, short-training, save/resume, merge, DFM export, and VisoMaster Fusion acceptance gates.
+- [x] Implement step 11 authorized dataset preflight: separate source/destination paths, authorization confirmation, repository/runtime path rejection, file-count and size limits, SHA-256 per input, optional bounded `ffprobe` metadata sampling, identical-file overlap rejection, and repository/workspace before/after checks.
+- [x] Keep step 11 read-only: it does not copy media, extract frames or faces, import TensorFlow, execute DeepFaceLab, or start training.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure; a later TLS handshake failure also cleared on retry without disabling certificate verification.
 
 ## Verified local results
@@ -149,17 +152,17 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 ## In progress
 
 - [ ] Complete step 9 on `hp-a2000` when that computer is used again.
-- [ ] Define and validate a tiny authorized, non-public P0 test dataset with separate source/destination identities and no tracked media.
-- [ ] Add a dataset preflight that records local paths, hashes, duration/resolution metadata, consent/authorization confirmation, and workspace cleanliness without extracting faces.
-- [ ] Execute face extraction, short training, save/exit, resume, merge, DFM export, and VisoMaster Fusion loading under a staged acceptance plan.
+- [ ] Run step 11 on RTX 5880 Ada with a tiny authorized, non-public dataset and review the generated manifest before copying media into the historical workspace.
+- [ ] Build a separately bounded frame-extraction stage after the step-11 manifest is accepted.
+- [ ] Execute face extraction, short training, save/exit, resume, merge, DFM export, and VisoMaster Fusion loading under the staged acceptance plan.
 
 ## Next local work on RTX 5880 Ada
 
-1. Pull this step 10 progress update.
-2. Prepare two short, authorized, non-public test clips or image sets: one source identity and one destination identity.
-3. Keep all media outside the Git repository and do not use public or third-party faces without permission.
-4. Run a new dataset preflight before copying anything into the historical workspace.
-5. Do not begin extraction or training until the dataset manifest and staged end-to-end limits are reviewed.
+1. Pull the step-11 implementation and updated progress file.
+2. Prepare two short, authorized, non-public test clips or image sets outside both the repository and historical runtime: one source identity and one destination identity.
+3. Run `11_创建P0授权测试数据清单.bat` with the RTX 5880 Ada historical profile and the two external media paths.
+4. Review only the manifest summary in the development chat; do not upload the actual media or full face data.
+5. Do not copy media into workspace or start extraction/training until the manifest is accepted.
 
 ## Known risks
 
