@@ -42,14 +42,40 @@ function Add-Check {
     }
 }
 
+function Invoke-NativeText {
+    param(
+        [Parameter(Mandatory = $true)][string]$Executable,
+        [string[]]$Arguments = @()
+    )
+
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $lines = @(& $Executable @Arguments 2>&1 | ForEach-Object { $_.ToString() })
+        return [PSCustomObject]@{
+            exit_code = $LASTEXITCODE
+            output = ($lines -join [Environment]::NewLine).Trim()
+        }
+    }
+    catch {
+        return [PSCustomObject]@{
+            exit_code = -1
+            output = $_.Exception.ToString()
+        }
+    }
+    finally {
+        $ErrorActionPreference = $previousPreference
+    }
+}
+
 function Invoke-Git {
     param([string[]]$Arguments)
 
-    $output = & git -C $repoRoot @Arguments 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) {
-        throw ("git {0} failed: {1}" -f ($Arguments -join ' '), $output.Trim())
+    $captured = Invoke-NativeText -Executable 'git' -Arguments (@('-C', $repoRoot) + $Arguments)
+    if ($captured.exit_code -ne 0) {
+        throw ("git {0} failed: {1}" -f ($Arguments -join ' '), $captured.output)
     }
-    return $output.Trim()
+    return $captured.output
 }
 
 $gitCommand = Get-Command git -ErrorAction SilentlyContinue
@@ -98,14 +124,18 @@ $trackedSensitive = @()
 if ($null -ne $gitCommand) {
     $trackedFiles = Invoke-Git -Arguments @('ls-files')
     if (-not [string]::IsNullOrWhiteSpace($trackedFiles)) {
-        $trackedSensitive = $trackedFiles -split "`r?`n" | Where-Object {
-            $_ -match '^(workspace|artifacts)/' -or $_ -match '\.dfm$'
-        }
+        # Force an array even when the filter returns zero or one item.
+        $trackedSensitive = @(
+            $trackedFiles -split "`r?`n" | Where-Object {
+                $_ -match '^(workspace|artifacts)/' -or $_ -match '\.dfm$'
+            }
+        )
     }
 }
-Add-Check -Name 'no_tracked_private_artifacts' -Passed ($trackedSensitive.Count -eq 0) -Details $(
-    if ($trackedSensitive.Count -eq 0) { 'No workspace, artifacts, or DFM files are tracked.' }
-    else { $trackedSensitive -join '; ' }
+$trackedSensitiveCount = @($trackedSensitive).Count
+Add-Check -Name 'no_tracked_private_artifacts' -Passed ($trackedSensitiveCount -eq 0) -Details $(
+    if ($trackedSensitiveCount -eq 0) { 'No workspace, artifacts, or DFM files are tracked.' }
+    else { @($trackedSensitive) -join '; ' }
 )
 
 $nvidiaSmi = Get-Command nvidia-smi -ErrorAction SilentlyContinue
@@ -121,11 +151,10 @@ Add-Check -Name 'ffmpeg_available' -Passed ($null -ne $ffmpeg) -Details $(
 
 $pythonCheckPassed = $false
 $pythonDetails = 'No Python executable was supplied and python was not found on PATH.'
+$resolvedPython = $null
 if (-not [string]::IsNullOrWhiteSpace($PythonExe)) {
     if (Test-Path -LiteralPath $PythonExe -PathType Leaf) {
-        $pythonOutput = & $PythonExe -c 'import sys; print(sys.executable); print(sys.version)' 2>&1 | Out-String
-        $pythonCheckPassed = ($LASTEXITCODE -eq 0)
-        $pythonDetails = $pythonOutput.Trim()
+        $resolvedPython = (Resolve-Path -LiteralPath $PythonExe).Path
     }
     else {
         $pythonDetails = ("Python executable does not exist: {0}" -f $PythonExe)
@@ -134,10 +163,17 @@ if (-not [string]::IsNullOrWhiteSpace($PythonExe)) {
 else {
     $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
     if ($null -ne $pythonCommand) {
-        $pythonOutput = & $pythonCommand.Source -c 'import sys; print(sys.executable); print(sys.version)' 2>&1 | Out-String
-        $pythonCheckPassed = ($LASTEXITCODE -eq 0)
-        $pythonDetails = $pythonOutput.Trim()
+        $resolvedPython = $pythonCommand.Source
     }
+}
+
+if (-not [string]::IsNullOrWhiteSpace($resolvedPython)) {
+    $pythonProbe = Invoke-NativeText -Executable $resolvedPython -Arguments @(
+        '-c',
+        'import sys; print(sys.executable); print(sys.version.replace(chr(10), " "))'
+    )
+    $pythonCheckPassed = ($pythonProbe.exit_code -eq 0)
+    $pythonDetails = $pythonProbe.output
 }
 Add-Check -Name 'python_runtime_visible' -Passed $pythonCheckPassed -Details $pythonDetails -Required $false
 
@@ -149,16 +185,33 @@ if (-not [string]::IsNullOrWhiteSpace($PythonExe)) {
     $diagnosticParameters['PythonExe'] = $PythonExe
 }
 
-$diagnosticResult = & $diagnosticScript @diagnosticParameters
-$diagnosticReportPath = $diagnosticResult.report_path
-Add-Check -Name 'diagnostics_report_written' -Passed (Test-Path -LiteralPath $diagnosticReportPath -PathType Leaf) -Details $diagnosticReportPath
+$diagnosticObjects = @(& $diagnosticScript @diagnosticParameters)
+$diagnosticResult = @($diagnosticObjects | Where-Object {
+    $_ -is [PSObject] -and $_.PSObject.Properties.Name -contains 'report_path'
+} | Select-Object -Last 1)
+
+$diagnosticReportPath = $null
+if ($diagnosticResult.Count -gt 0) {
+    $diagnosticReportPath = $diagnosticResult[0].report_path
+}
+Add-Check -Name 'diagnostics_report_written' -Passed (
+    -not [string]::IsNullOrWhiteSpace($diagnosticReportPath) -and
+    (Test-Path -LiteralPath $diagnosticReportPath -PathType Leaf)
+) -Details $(
+    if ([string]::IsNullOrWhiteSpace($diagnosticReportPath)) {
+        'The diagnostics script did not return a report path.'
+    }
+    else {
+        $diagnosticReportPath
+    }
+)
 
 $timestamp = (Get-Date).ToUniversalTime()
 $fileTimestamp = $timestamp.ToString('yyyyMMddTHHmmssZ')
 $summaryPath = Join-Path $OutputDirectory ("acceptance-summary-{0}.json" -f $fileTimestamp)
 
 $summary = [ordered]@{
-    schema_version = 1
+    schema_version = 2
     generated_at_utc = $timestamp.ToString('o')
     phase = 'p0_environment_scaffold'
     status = $(if ($failures.Count -eq 0) { 'passed' } else { 'blocked' })
