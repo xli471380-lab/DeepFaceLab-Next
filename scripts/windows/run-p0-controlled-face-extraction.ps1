@@ -9,7 +9,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$runner = Join-Path $PSScriptRoot 'run-p0-controlled-face-extraction-v2.ps1'
+$runner = Join-Path $PSScriptRoot 'run-p0-controlled-face-extraction-v3.ps1'
 if (-not (Test-Path -LiteralPath $runner -PathType Leaf)) {
     throw "Step 13 PowerShell 5.1 runner was not found: $runner"
 }
