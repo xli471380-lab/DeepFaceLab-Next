@@ -50,6 +50,9 @@ Last updated: 2026-07-20
 - [x] Extract the verified SFX with 7-Zip into `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` without executing the original EXE.
 - [x] Confirm extraction used the expected SHA-256, archive integrity test exit code `0`, and extraction exit code `0`.
 - [x] Run a Huorong custom scan against the extracted runtime; result: `0` risks across `74941` scanned objects.
+- [x] Review the extraction inventory and confirm a plausible DeepFaceLab portable runtime structure.
+- [x] Confirm the runtime contains one embedded Python 3.6.8 executable, one FFmpeg executable, the expected DeepFaceLab `main.py`, a portable `workspace`, and an `_internal` directory.
+- [x] Add `7_创建历史运行配置并只读检查.bat` plus a guarded profile-and-version probe that does not execute DeepFaceLab `main.py`.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure.
 
 ## Verified local results
@@ -112,10 +115,16 @@ Static archive inspection:
 
 ### Extracted historical runtime
 
-Destination:
+Extraction destination:
 
 ```text
 F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120
+```
+
+Actual portable runtime root:
+
+```text
+F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series
 ```
 
 Extraction result:
@@ -126,11 +135,31 @@ Extraction result:
 - Real archive entries checked: `29098`.
 - Extracted files: `23376`.
 - Extracted directories: `5722`.
-- Embedded Python candidates: `1`.
-- FFmpeg candidates: `1`.
+- Extracted size: `8146405202` bytes.
+- BAT files: `60`; EXE files: `67`; DLL files: `365`; Python files: `7315`.
 - Extraction report: `D:\DeepFaceLab-Next\artifacts\p0\hp-a2000\system-py312\legacy-runtime-extraction\legacy-runtime-extraction-20260720T071707Z.json`.
 - Huorong custom scan of the extracted runtime: `74941` objects scanned, `0` risks found, `0` risks processed.
-- No extracted file has been intentionally executed yet.
+
+Confirmed runtime paths:
+
+```text
+Python:
+F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\_internal\python-3.6.8\python.exe
+
+FFmpeg:
+F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\_internal\ffmpeg\ffmpeg.exe
+
+DeepFaceLab main.py:
+F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\_internal\DeepFaceLab\main.py
+
+Workspace:
+F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\workspace
+
+Internal root:
+F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\_internal
+```
+
+No DeepFaceLab BAT, EXE, `main.py`, training command, or workspace task has been intentionally started yet.
 
 ### Active protection provider
 
@@ -168,19 +197,22 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 
 ## In progress
 
-- [ ] Review the generated extraction inventory and top-level structure for a plausible DeepFaceLab portable runtime.
-- [ ] Create a `legacy-dfl-baseline` local profile for the extracted runtime.
-- [ ] Verify embedded Python, TensorFlow, CUDA/cuDNN, FFmpeg, and GPU detection.
+- [ ] Pull and run `7_创建历史运行配置并只读检查.bat`.
+- [ ] Create the ignored `config\local\hp-a2000-legacy-dfl-rtx3000-20211120.psd1` profile from confirmed paths.
+- [ ] Record embedded Python, selected package versions, FFmpeg version, NVIDIA status, and bundled CUDA DLL inventory.
+- [ ] Run a separate controlled TensorFlow/import/GPU visibility probe after reviewing the read-only version report.
 - [ ] Prepare a small, authorized, non-public test dataset.
 - [ ] Execute extraction, short training, save/resume, merge, DFM export, and VisoMaster Fusion loading.
 - [ ] Reproduce the accepted baseline on the second computer later without blocking current work.
 
 ## Next local acceptance work
 
-1. Read and review `legacy-runtime-extraction-20260720T071707Z.json`.
-2. Confirm the exact embedded Python, FFmpeg, `main.py`, `workspace`, and `_internal` paths.
-3. Create an ignored `legacy-dfl-baseline` local profile pointing to the embedded tools.
-4. Run non-mutating version and import probes before using authorized test media.
+1. Pull the latest branch with HTTP/1.1.
+2. Run `7_创建历史运行配置并只读检查.bat`.
+3. Confirm the displayed runtime root and type `PROBE`.
+4. Review the generated local profile and `legacy-runtime-readonly-probe-*.json` report.
+5. Do not start DeepFaceLab `main.py` or training yet.
+6. Add a separate controlled TensorFlow/import/GPU probe after the version report is accepted.
 
 ## Known risks
 
