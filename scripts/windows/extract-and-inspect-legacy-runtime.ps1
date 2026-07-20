@@ -93,21 +93,69 @@ function Invoke-NativeCapture {
     }
 }
 
+function Get-SevenZipEntryPaths {
+    param([Parameter(Mandatory = $true)][string]$ListingText)
+
+    # 7-Zip -slt prints one or more archive-metadata records before the
+    # actual file records. The first metadata Path is the absolute path of
+    # the SFX being inspected and must not be treated as an archive entry.
+    # Real entry records contain an exact "Size =" or "Attributes =" field.
+    $entryPaths = New-Object System.Collections.ArrayList
+    $currentPath = $null
+    $currentIsEntry = $false
+
+    foreach ($line in @($ListingText -split "`r?`n")) {
+        if ([string]::IsNullOrWhiteSpace($line)) {
+            if ($null -ne $currentPath -and $currentIsEntry) {
+                [void]$entryPaths.Add($currentPath)
+            }
+            $currentPath = $null
+            $currentIsEntry = $false
+            continue
+        }
+
+        if ($line -like 'Path = *') {
+            if ($null -ne $currentPath -and $currentIsEntry) {
+                [void]$entryPaths.Add($currentPath)
+            }
+            $currentPath = $line.Substring(7)
+            $currentIsEntry = $false
+            continue
+        }
+
+        if ($line -like 'Size = *' -or $line -like 'Attributes = *' -or $line -like 'Folder = *') {
+            $currentIsEntry = $true
+        }
+    }
+
+    if ($null -ne $currentPath -and $currentIsEntry) {
+        [void]$entryPaths.Add($currentPath)
+    }
+
+    return @($entryPaths)
+}
+
 $listResult = Invoke-NativeCapture -Executable $sevenZip -Arguments @('l', '-slt', $resolvedPackage)
 $listResult.output | Set-Content -LiteralPath $listPath -Encoding UTF8
 if ($listResult.exit_code -ne 0) {
     throw "7-Zip listing failed with exit code $($listResult.exit_code)."
 }
 
-$archivePaths = @($listResult.output -split "`r?`n" | Where-Object { $_ -like 'Path = *' } | ForEach-Object { $_.Substring(7) })
+$allPathValues = @($listResult.output -split "`r?`n" | Where-Object { $_ -like 'Path = *' } | ForEach-Object { $_.Substring(7) })
+$archivePaths = @(Get-SevenZipEntryPaths -ListingText $listResult.output)
+if ($archivePaths.Count -eq 0) {
+    throw '7-Zip listing did not yield any archive entry records.'
+}
+
 $unsafePaths = @($archivePaths | Where-Object {
     $_ -match '(^|[\\/])\.\.([\\/]|$)' -or
     $_ -match '^[A-Za-z]:' -or
     $_ -match '^[\\/]{2}' -or
-    $_ -match '^[\\/]'
+    $_ -match '^[\\/]' -or
+    $_ -match ':'
 })
 if ($unsafePaths.Count -gt 0) {
-    throw ('Archive contains unsafe absolute or parent-traversal paths: ' + (($unsafePaths | Select-Object -First 10) -join '; '))
+    throw ('Archive contains unsafe absolute, parent-traversal, or alternate-stream paths: ' + (($unsafePaths | Select-Object -First 10) -join '; '))
 }
 
 $testResult = Invoke-NativeCapture -Executable $sevenZip -Arguments @('t', $resolvedPackage)
@@ -133,7 +181,7 @@ $internalCandidates = @($directories | Where-Object { $_.Name -ieq '_internal' }
 $mainCandidates = @($files | Where-Object { $_.Name -ieq 'main.py' } | Select-Object -ExpandProperty FullName)
 
 $report = [ordered]@{
-    schema_version = 1
+    schema_version = 2
     generated_at_utc = $timestamp.ToString('o')
     repository_commit = (& git -C $repoRoot rev-parse HEAD 2>$null | Out-String).Trim()
     machine_id = $machineId
@@ -150,6 +198,8 @@ $report = [ordered]@{
         list_exit_code = $listResult.exit_code
         test_exit_code = $testResult.exit_code
         extraction_exit_code = $extractResult.exit_code
+        raw_path_value_count = $allPathValues.Count
+        metadata_path_value_count = ($allPathValues.Count - $archivePaths.Count)
         listed_entry_count = $archivePaths.Count
         unsafe_path_count = $unsafePaths.Count
         list_output_file = $listPath
@@ -182,6 +232,7 @@ Write-Host 'Legacy runtime extraction completed without executing the SFX.' -For
 Write-Host ("Destination: {0}" -f $destinationFull)
 Write-Host ("SHA-256 verified: {0}" -f ($actualHash -eq $expectedHash))
 Write-Host ("Archive integrity test: {0}" -f $testResult.exit_code)
+Write-Host ("Archive entries checked: {0}" -f $archivePaths.Count)
 Write-Host ("Files: {0}; Directories: {1}" -f $files.Count, $directories.Count)
 Write-Host ("Embedded Python candidates: {0}" -f $pythonCandidates.Count)
 Write-Host ("FFmpeg candidates: {0}" -f $ffmpegCandidates.Count)
@@ -195,6 +246,7 @@ Write-Host 'Do not run any extracted file yet. Scan the destination with Huorong
     hash_match = ($actualHash -eq $expectedHash)
     archive_test_exit_code = $testResult.exit_code
     extraction_exit_code = $extractResult.exit_code
+    archive_entry_count = $archivePaths.Count
     file_count = $files.Count
     directory_count = $directories.Count
 }
