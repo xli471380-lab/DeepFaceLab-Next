@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$targetScript = Join-Path $PSScriptRoot 'inspect-legacy-python-layout-v3.ps1'
+$targetScript = Join-Path $PSScriptRoot 'inspect-legacy-python-layout-v4.ps1'
 $profileResolved = (Resolve-Path -LiteralPath $ProfilePath).Path
 
 if (-not (Test-Path -LiteralPath $targetScript -PathType Leaf)) {
@@ -52,6 +52,7 @@ try {
     Write-Host ''
     Write-Host '[2/4] Running isolated stages. TensorFlow is not imported.' -ForegroundColor Cyan
     Write-Host 'Large inventories are written as text files; the main JSON remains compact.'
+    Write-Host 'Windows PowerShell 5.1 missing native exit codes are normalized only after strict evidence checks.'
     Write-Host ''
 
     $argumentString = '-NoProfile -ExecutionPolicy Bypass -File "{0}" -ProfilePath "{1}" -ProgressPath "{2}" -PythonProbeTimeoutSeconds {3}' -f `
@@ -104,6 +105,7 @@ try {
 
     $completed = $true
     $process.WaitForExit()
+    $process.Refresh()
     $exitCode = $process.ExitCode
 
     Write-Host ''
