@@ -1,37 +1,36 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
-chcp 65001 >nul
 cd /d "%~dp0"
-title DeepFaceLab-Next - 扫描本机历史运行环境
+title DeepFaceLab-Next - Legacy Runtime Discovery
 
 echo.
 echo ============================================================
-echo   DeepFaceLab-Next - 扫描本机 DeepFaceLab 历史运行环境
+echo   DeepFaceLab-Next - Legacy Runtime Discovery
 echo ============================================================
 echo.
-echo 说明：
-echo - 只读取目录和版本信息
-echo - 不运行发现的 BAT 文件
-echo - 不安装或修改 Python、CUDA、FFmpeg
-echo - 扫描报告保存在 artifacts 目录
+echo Notes:
+echo - Reads directory metadata and version information only.
+echo - Does not run discovered BAT files.
+echo - Does not install or modify Python, CUDA, or FFmpeg.
+echo - Saves the report under artifacts.
 echo.
 
 set "PROFILE="
 for /f "delims=" %%P in ('dir /b /a-d "config\local\*.psd1" 2^>nul') do if not defined PROFILE set "PROFILE=config\local\%%P"
 
 if defined PROFILE (
-    echo 使用本机环境档案：%PROFILE%
+    echo Local profile: %PROFILE%
 ) else (
-    echo [提示] config\local 中没有找到本机环境档案。
-    echo 将使用 Windows 电脑名称作为报告标签。
+    echo No local profile found under config\local.
+    echo The Windows computer name will be used as the report label.
 )
 echo.
 
 set "ROOTS="
-set /p "ROOTS=输入要扫描的盘符或目录，多个路径用英文逗号分隔；直接回车扫描全部固定磁盘："
+set /p "ROOTS=Search roots, separated by commas. Press Enter for all fixed drives: "
 
 echo.
-echo 正在扫描，请等待。大型磁盘可能需要几分钟...
+echo Scanning. Large drives may take several minutes...
 echo.
 
 if defined ROOTS (
@@ -54,14 +53,14 @@ if defined ROOTS (
 
 if errorlevel 1 (
     echo.
-    echo [错误] 扫描没有完成，请把上面的错误信息发给开发助手。
+    echo Discovery failed. Share the error output with the developer.
     echo.
     pause
     exit /b 1
 )
 
 echo.
-echo 扫描完成。请把最后显示的 JSON 报告内容发给开发助手。
+echo Discovery completed. Share the latest JSON report with the developer.
 echo.
 pause
 exit /b 0
