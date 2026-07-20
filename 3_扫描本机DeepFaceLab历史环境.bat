@@ -27,22 +27,23 @@ if defined PROFILE (
 echo.
 
 set "ROOTS="
-set /p "ROOTS=Search roots, separated by commas. Press Enter for all fixed drives: "
+set /p "ROOTS=Search roots, separated by commas. Press Enter or type ALL for all fixed drives: "
+if /i "%ROOTS%"=="ALL" set "ROOTS="
 
 echo.
 echo Scanning. Large drives may take several minutes...
 echo.
 
 if defined ROOTS (
+    set "DFL_SEARCH_ROOTS=%ROOTS%"
     if defined PROFILE (
         powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-          "$items = '%ROOTS%'.Split(',') ^| ForEach-Object { $_.Trim() } ^| Where-Object { $_ };" ^
-          "& '.\scripts\windows\discover-legacy-runtime.ps1' -ProfilePath '%PROFILE%' -SearchRoots $items -MaxDepth 4"
+          "$items = New-Object 'System.Collections.Generic.List[string]'; foreach ($item in $env:DFL_SEARCH_ROOTS.Split(',')) { $value = $item.Trim(); if ($value) { [void]$items.Add($value) } }; & '.\scripts\windows\discover-legacy-runtime.ps1' -ProfilePath '%PROFILE%' -SearchRoots $items.ToArray() -MaxDepth 4"
     ) else (
         powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-          "$items = '%ROOTS%'.Split(',') ^| ForEach-Object { $_.Trim() } ^| Where-Object { $_ };" ^
-          "& '.\scripts\windows\discover-legacy-runtime.ps1' -SearchRoots $items -MaxDepth 4"
+          "$items = New-Object 'System.Collections.Generic.List[string]'; foreach ($item in $env:DFL_SEARCH_ROOTS.Split(',')) { $value = $item.Trim(); if ($value) { [void]$items.Add($value) } }; & '.\scripts\windows\discover-legacy-runtime.ps1' -SearchRoots $items.ToArray() -MaxDepth 4"
     )
+    set "DFL_SEARCH_ROOTS="
 ) else (
     if defined PROFILE (
         powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\discover-legacy-runtime.ps1" -ProfilePath "%PROFILE%" -MaxDepth 4
