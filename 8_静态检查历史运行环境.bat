@@ -14,6 +14,7 @@ echo TensorFlow imports, extraction, merge, or training commands.
 echo.
 
 set "PROFILE=config\local\hp-a2000-legacy-dfl-rtx3000-20211120.psd1"
+if not "%~1"=="" set "PROFILE=%~1"
 
 if not exist "%PROFILE%" (
     echo ERROR: Local legacy runtime profile was not found:
