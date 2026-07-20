@@ -17,6 +17,13 @@ echo.
 
 set "RUNTIME_ROOT=F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series"
 set "PROFILE=config\local\hp-a2000-legacy-dfl-rtx3000-20211120.psd1"
+set "MACHINE_ID=hp-a2000"
+set "ENVIRONMENT_ID=legacy-dfl-rtx3000-20211120"
+
+if not "%~1"=="" set "RUNTIME_ROOT=%~1"
+if not "%~2"=="" set "PROFILE=%~2"
+if not "%~3"=="" set "MACHINE_ID=%~3"
+if not "%~4"=="" set "ENVIRONMENT_ID=%~4"
 
 if not exist "%RUNTIME_ROOT%\_internal\python-3.6.8\python.exe" (
     echo ERROR: Embedded Python was not found under:
@@ -40,6 +47,9 @@ echo.
 echo Local profile:
 echo %PROFILE%
 echo.
+echo Machine ID: %MACHINE_ID%
+echo Environment ID: %ENVIRONMENT_ID%
+echo.
 set /p "CONFIRM=Type PROBE to continue: "
 if /i not "%CONFIRM%"=="PROBE" (
     echo.
@@ -49,7 +59,7 @@ if /i not "%CONFIRM%"=="PROBE" (
     exit /b 2
 )
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\configure-and-probe-legacy-runtime.ps1" -RuntimeRoot "%RUNTIME_ROOT%" -ProfilePath "%PROFILE%" -MachineId "hp-a2000" -EnvironmentId "legacy-dfl-rtx3000-20211120"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\configure-and-probe-legacy-runtime.ps1" -RuntimeRoot "%RUNTIME_ROOT%" -ProfilePath "%PROFILE%" -MachineId "%MACHINE_ID%" -EnvironmentId "%ENVIRONMENT_ID%"
 
 if errorlevel 1 (
     echo.
