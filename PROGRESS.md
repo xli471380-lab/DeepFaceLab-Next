@@ -36,7 +36,7 @@ Last updated: 2026-07-20
 - [x] Add one-click static package inspection and Defender diagnostic tools.
 - [x] Install 7-Zip 26.02 from the verified WinGet package.
 - [x] List and integrity-test the downloaded 7-Zip SFX archive without executing it.
-- [x] Confirm the 7-Zip integrity test returns exit code `0` with `29099` listed entries.
+- [x] Confirm the 7-Zip integrity test returns exit code `0` with `29099` listed values.
 - [x] Diagnose Microsoft Defender as `Not running`, with antivirus and real-time protection disabled.
 - [x] Confirm Defender scan failures are service-state failures, not malware detections.
 - [x] Run Microsoft Safety Scanner quick scan; it removed `VirTool:Win32/DefenderTamperingRestore` from the `DisableAntiSpyware` registry value.
@@ -46,6 +46,9 @@ Last updated: 2026-07-20
 - [x] Run Microsoft Safety Scanner custom scan against the downloaded package folder; final result: `No infection found`, return code `0`.
 - [x] Recalculate the package SHA-256 after both scans and confirm it remains unchanged.
 - [x] Add guarded 7-Zip extraction tooling that verifies the expected hash, rejects unsafe paths, tests archive integrity, extracts outside the repository, and writes an inventory without executing the SFX.
+- [x] Fix the guarded extractor so 7-Zip archive metadata is not misclassified as an internal absolute path.
+- [x] Extract the verified SFX with 7-Zip into `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` without executing the original EXE.
+- [x] Confirm extraction used the expected SHA-256, archive integrity test exit code `0`, and extraction exit code `0`.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure.
 
 ## Verified local results
@@ -102,10 +105,32 @@ Static archive inspection:
 - 7-Zip executable: `C:\Program Files\7-Zip\7z.exe`.
 - 7-Zip version: `26.02`.
 - Archive test exit code: `0`.
-- Listed entries: `29099`.
-- No archive-corruption error was reported.
+- Initial raw `Path =` values: `29099`.
+- Real archive entries validated by the guarded extractor: `29098`.
+- No archive-corruption or unsafe-entry-path error was reported after the metadata parser fix.
 
-Active protection provider:
+### Extracted historical runtime
+
+Destination:
+
+```text
+F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120
+```
+
+Extraction result:
+
+- Source SHA-256 matched the expected value: `True`.
+- Archive integrity test exit code: `0`.
+- Extraction exit code: `0`.
+- Real archive entries checked: `29098`.
+- Extracted files: `23376`.
+- Extracted directories: `5722`.
+- Embedded Python candidates: `1`.
+- FFmpeg candidates: `1`.
+- Extraction report: `D:\DeepFaceLab-Next\artifacts\p0\hp-a2000\system-py312\legacy-runtime-extraction\legacy-runtime-extraction-20260720T071707Z.json`.
+- No extracted file has been intentionally executed yet.
+
+### Active protection provider
 
 - Product: `火绒安全软件` / Huorong Security.
 - Version: `6.0.11.1`.
@@ -115,7 +140,7 @@ Active protection provider:
 - `HRWSCCtrl`: `Running`; this is Huorong's Windows Security Center integration service.
 - Conclusion: Huorong is the active real-time protection product. Microsoft Defender should not be force-started while Huorong remains installed and active.
 
-Malware scan results:
+### Malware scan results
 
 - Huorong custom scan of the package folder: `0` risks.
 - Microsoft Safety Scanner custom scan started at `2026-07-20 14:27:05` and finished at `14:47:37`.
@@ -140,10 +165,8 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 
 ## In progress
 
-- [ ] Pull the guarded extraction tooling.
-- [ ] Extract the verified SFX with 7-Zip into `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` without executing the original EXE.
-- [ ] Review the generated extraction inventory for a plausible DeepFaceLab portable structure.
-- [ ] Scan the extracted directory with Huorong before running any BAT, EXE, Python, or DLL.
+- [ ] Scan `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` with Huorong before running any BAT, EXE, Python, or DLL.
+- [ ] Review the generated extraction inventory and top-level structure for a plausible DeepFaceLab portable runtime.
 - [ ] Create a `legacy-dfl-baseline` local profile for the extracted runtime.
 - [ ] Verify embedded Python, TensorFlow, CUDA/cuDNN, FFmpeg, and GPU detection.
 - [ ] Prepare a small, authorized, non-public test dataset.
@@ -152,14 +175,12 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 
 ## Next local acceptance work
 
-1. Pull the latest branch using HTTP/1.1 if the normal GitHub pull returns `Empty reply from server`.
-2. Run `6_安全解压历史运行包.bat`.
-3. Type `EXTRACT` only after confirming the displayed source and destination paths.
-4. Do not run any file from the extracted directory.
-5. Review the generated JSON inventory and top-level directory structure.
-6. Scan `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` with Huorong custom scan.
-7. Create an ignored `legacy-dfl-baseline` profile pointing to the embedded tools.
-8. Validate the historical environment before using authorized test media.
+1. Scan `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` with Huorong custom scan.
+2. Do not run any extracted BAT, EXE, Python, or DLL until the extracted-directory scan completes with zero risks.
+3. Read and review `legacy-runtime-extraction-20260720T071707Z.json`.
+4. Confirm the exact embedded Python, FFmpeg, `main.py`, `workspace`, and `_internal` paths.
+5. Create an ignored `legacy-dfl-baseline` local profile pointing to the embedded tools.
+6. Run non-mutating version and import probes before using authorized test media.
 
 ## Known risks
 
