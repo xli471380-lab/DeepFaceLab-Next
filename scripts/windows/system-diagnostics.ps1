@@ -156,9 +156,11 @@ elseif ($nvccVersion.exit_code -ne 0) {
     $warnings.Add('nvcc was found but did not run successfully.')
 }
 
+# Avoid embedded quote characters in the -c payload. Windows PowerShell 5.1
+# can otherwise alter native-process arguments before Python receives them.
 $pythonArguments = @(
     '-c',
-    'import platform,sys; print(sys.executable); print(sys.version.replace(chr(10), " ")); print(platform.platform())'
+    'import platform,sys; print(sys.executable); print(sys.version.replace(chr(10),chr(32)).replace(chr(13),chr(32))); print(platform.platform())'
 )
 
 $pythonResult = $null
@@ -198,9 +200,10 @@ foreach ($name in $environmentNames) {
 $timestamp = (Get-Date).ToUniversalTime()
 $fileTimestamp = $timestamp.ToString('yyyyMMddTHHmmssZ')
 $outputPath = Join-Path $OutputDirectory ("system-diagnostics-{0}.json" -f $fileTimestamp)
+$warningRecords = @($warnings | ForEach-Object { [string]$_ })
 
 $report = [ordered]@{
-    schema_version = 2
+    schema_version = 3
     generated_at_utc = $timestamp.ToString('o')
     status = 'diagnostic_complete'
     repository = [ordered]@{
@@ -237,7 +240,7 @@ $report = [ordered]@{
         python_launcher = $pythonLauncher
     }
     environment = $environment
-    warnings = @($warnings)
+    warnings = $warningRecords
     privacy_note = 'Review this local report before sharing because executable and environment paths may contain usernames or private directory names.'
 }
 
@@ -246,17 +249,17 @@ $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $outputPath -Encod
 Write-Host ''
 Write-Host 'DeepFaceLab-Next P0 system diagnostics completed.' -ForegroundColor Green
 Write-Host ("Report: {0}" -f $outputPath)
-if ($warnings.Count -gt 0) {
+if ($warningRecords.Count -gt 0) {
     Write-Host ''
     Write-Host 'Warnings:' -ForegroundColor Yellow
-    foreach ($warning in $warnings) {
+    foreach ($warning in $warningRecords) {
         Write-Host ("- {0}" -f $warning) -ForegroundColor Yellow
     }
 }
 
 [PSCustomObject]@{
     report_path = $outputPath
-    warning_count = $warnings.Count
+    warning_count = $warningRecords.Count
     commit = $report.repository.commit
     branch = $report.repository.branch
 }
