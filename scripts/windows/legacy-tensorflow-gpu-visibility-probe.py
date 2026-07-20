@@ -31,6 +31,21 @@ def safe_text(value):
         return repr(value)
 
 
+def json_safe(value):
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, bytes):
+        try:
+            return value.decode("utf-8", "replace")
+        except Exception:
+            return repr(value)
+    if isinstance(value, dict):
+        return {safe_text(key): json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [json_safe(item) for item in value]
+    return safe_text(value)
+
+
 def device_record(device):
     return {
         "name": safe_text(getattr(device, "name", "")),
@@ -47,7 +62,7 @@ def physical_device_record(device, tensorflow_module):
     }
     try:
         details = tensorflow_module.config.experimental.get_device_details(device)
-        record["details"] = details
+        record["details"] = json_safe(details)
     except Exception as exc:
         record["details_error"] = safe_text(exc)
     return record
@@ -78,6 +93,9 @@ def main():
         "physical_gpus": [],
         "local_devices": [],
         "gpu_device_name": "",
+        "physical_gpu_count": 0,
+        "local_gpu_count": 0,
+        "gpu_visible": False,
         "errors": [],
         "safety": {
             "deepfacelab_main_imported": False,
@@ -103,7 +121,7 @@ def main():
 
         try:
             build_info = tf.sysconfig.get_build_info()
-            result["tensorflow"]["build_info"] = build_info
+            result["tensorflow"]["build_info"] = json_safe(build_info)
         except Exception as exc:
             result["tensorflow"]["build_info_error"] = safe_text(exc)
 
@@ -174,7 +192,7 @@ def main():
     finally:
         write_stage(stage_path, "result", "Writing the sentinel JSON result; no training or tensor workload was started.")
         print("__DFLNEXT_TF_GPU_JSON_BEGIN__")
-        print(json.dumps(result, sort_keys=True))
+        print(json.dumps(json_safe(result), sort_keys=True))
         print("__DFLNEXT_TF_GPU_JSON_END__")
         sys.stdout.flush()
         write_stage(stage_path, "complete", "The TensorFlow/GPU worker finished and emitted its sentinel JSON result.")
