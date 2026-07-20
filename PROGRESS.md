@@ -10,7 +10,7 @@ Last updated: 2026-07-20
 - Active branch: `agent/p0-reproducible-baseline`.
 - Draft pull request: `#1 P0: establish reproducible baseline framework`.
 - Current milestone: **P0 — Reproducible historical baseline**.
-- Both computers are equal development nodes with independent local profiles, runtime files, workspaces, datasets, checkpoints, DFM files, and artifacts.
+- Both computers are independent development nodes with local profiles, runtimes, workspaces, media, checkpoints, DFM files, and generated artifacts kept outside Git.
 
 ## Completed
 
@@ -19,32 +19,27 @@ Last updated: 2026-07-20
 - [x] Add PowerShell 5.1-compatible diagnostics, profile-driven acceptance, per-profile artifacts, and safe computer-switch BAT files.
 - [x] Pass the system-profile scaffold on `hp-a2000 × system-py312`.
 - [x] Obtain, fingerprint, scan, integrity-test, and safely extract the upstream-linked RTX 3000 historical Windows package without executing its SFX.
-- [x] Confirm a plausible portable runtime structure with embedded Python, FFmpeg, `_internal`, DeepFaceLab `main.py`, and `workspace`.
-- [x] Pass the historical runtime read-only probe on `hp-a2000` without executing `main.py` or starting training.
-- [x] Pass static BAT/environment inspection on `hp-a2000`: 60 BAT files, 56 top-level BAT files, 1 skipped include-tree path, 0 read/hash errors, and 128 relevant environment lines.
+- [x] Confirm the portable runtime structure with embedded Python, FFmpeg, `_internal`, DeepFaceLab `main.py`, and `workspace`.
+- [x] Pass the historical runtime read-only probe and static BAT/environment inspection on `hp-a2000` without executing `main.py` or starting training.
 - [x] Add dedicated legacy Python layout inspection for `._pth`, `sys.path`, `site-packages`, package folders, static version files, and launcher BAT text.
-- [x] Synchronize the second computer to `agent/p0-reproducible-baseline` and create the ignored `rtx5880-ada × system-py311` profile.
-- [x] Complete second-computer system diagnostics with zero warnings.
-- [x] Scan fixed drives `C:\`, `D:\`, and `E:\` on the RTX 5880 Ada computer; find 2 candidates but 0 reusable historical portable bundles.
-- [x] Fix discovery input so blank input or `ALL` selects all fixed drives, while explicit roots are parsed without CMD/PowerShell pipe escaping errors.
-- [x] Parameterize steps 6–9 so package paths, extraction destinations, machine IDs, environment IDs, and local profile paths can differ between computers.
-- [x] Re-download the historical RTX 3000 package on the RTX 5880 Ada computer and confirm exact size `3919330734` bytes and SHA-256 `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
-- [x] Safely extract the verified package on the RTX 5880 Ada computer without executing the SFX: integrity exit `0`, extraction exit `0`, 29098 archive entries, 23376 files, and 5722 directories.
-- [x] Create the ignored `rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1` profile and pass the read-only runtime probe.
-- [x] Confirm the RTX 5880 Ada historical profile uses embedded Python 3.6.8, bundled FFmpeg successfully, and 8 bundled CUDA/cuDNN DLL records; `main.py` was not executed.
-- [x] Pass static BAT/environment inspection on RTX 5880 Ada: status `passed`, 1 package metadata record, 0 selected package records, 60 BAT files, 56 top-level BAT files, 0 enumeration errors, 0 read/hash errors, and 128 relevant environment lines.
-- [x] Pass legacy Python layout inspection on RTX 5880 Ada with schema v4 strict evidence normalization: both probes completed without timeout; normal and `-S` exit codes normalized to `0` only after complete sentinel JSON validation; default `sys.path` includes `site-packages`; 138 top-level items, 65 metadata directories, 9 selected artifact groups, 56 top-level BAT files, 112 relevant launcher lines, and 0 warnings.
-- [x] Add staged progress, independent Python-probe timeouts, compact JSON reporting, separate inventory text files, and fail-closed PowerShell 5.1 exit-code handling for step 9.
-- [x] Implement step 10 controlled TensorFlow/CUDA/GPU visibility probing with a mandatory zero-risk antivirus confirmation, passed-step-9 prerequisite, sanitized child environment, historical DLL discovery, 180-second timeout, process-tree termination, stage progress, captured stdout/stderr, sentinel JSON, and workspace before/after comparison.
-- [x] Keep step 10 fail closed: only a successful TensorFlow import plus visible GPU evidence and an unchanged workspace can pass; no `main.py`, bundled BAT, tensor workload, model, training, merge, or export is started.
-- [x] Record the user's explicit step-10 confirmation that the extracted RTX 5880 Ada runtime directory was scanned by the active antivirus with zero risks before TensorFlow import.
-- [x] Pass step 10 on RTX 5880 Ada: TensorFlow 2.6.0 imported, CUDA build confirmed, 1 physical GPU and 1 local GPU enumerated, no timeout, effective exit code `0`, 10 bundled CUDA/cuDNN DLL files selected, 7 isolated PATH entries, and workspace unchanged.
+- [x] Synchronize the RTX 5880 Ada computer and create ignored local profiles for its system and historical runtime environments.
+- [x] Complete RTX 5880 Ada system diagnostics with zero warnings.
+- [x] Scan fixed drives `C:\`, `D:\`, and `E:\`; find no reusable historical portable bundle.
+- [x] Re-download the historical RTX 3000 package and confirm exact size `3919330734` bytes and SHA-256 `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
+- [x] Safely extract the verified package without executing its SFX: integrity exit `0`, extraction exit `0`, 29098 archive entries, 23376 files, and 5722 directories.
+- [x] Pass the RTX 5880 Ada read-only runtime probe and static BAT/environment inspection.
+- [x] Pass legacy Python layout inspection on RTX 5880 Ada: both probes completed without timeout; default `sys.path` includes `site-packages`; 138 top-level items, 65 metadata directories, 9 selected artifact groups, 56 top-level BAT files, 112 relevant launcher lines, and 0 warnings.
+- [x] Implement and pass step 10 controlled TensorFlow/CUDA/GPU visibility probing with strict timeout, process-tree termination, sanitized environment, captured logs, sentinel JSON, and workspace comparison.
+- [x] Record the user's explicit zero-risk active-antivirus confirmation before step 10.
+- [x] Pass step 10 on RTX 5880 Ada: TensorFlow `2.6.0`, CUDA build `True`, physical GPU count `1`, local GPU count `1`, timeout `False`, effective exit code `0`, and workspace unchanged `True`.
 - [x] Add `P0_E2E_TEST_PLAN.md` with authorization, privacy, extraction, short-training, save/resume, merge, DFM export, and VisoMaster Fusion acceptance gates.
-- [x] Implement step 11 authorized dataset preflight: separate source/destination paths, authorization confirmation, repository/runtime path rejection, file-count and size limits, SHA-256 per input, optional bounded `ffprobe` metadata sampling, identical-file overlap rejection, and repository/workspace before/after checks.
-- [x] Keep step 11 read-only: it does not copy media, extract frames or faces, import TensorFlow, execute DeepFaceLab, or start training.
-- [x] Pass step 11 on RTX 5880 Ada using two distinct ControlFace10K synthetic identities: source 3 PNG files / 840910 bytes, destination 3 PNG files / 888285 bytes, identical SHA-256 overlap `0`, bundled `ffprobe` available, repository unchanged, and historical default workspace unchanged.
-- [x] Implement step 12 isolated P0 workspace preparation with mandatory passed-manifest validation, full source hash revalidation, new-target-only semantics, temporary staging, copied-file hash verification, historical default-workspace comparison, and no DeepFaceLab or TensorFlow execution.
-- [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure; a later TLS handshake failure also cleared on retry without disabling certificate verification.
+- [x] Implement step 11 authorized dataset preflight with path isolation, authorization confirmation, file/size limits, SHA-256 inventory, bounded `ffprobe` metadata sampling, identical-file rejection, and repository/workspace checks.
+- [x] Pass step 11 using two distinct ControlFace10K synthetic identities: source 3 PNG files / 840910 bytes; destination 3 PNG files / 888285 bytes; identical SHA-256 overlap `0`; repository unchanged; historical default workspace unchanged.
+- [x] Implement step 12 isolated P0 workspace preparation with passed-manifest validation, full source-hash revalidation, new-target-only semantics, temporary staging, copied-file hash verification, and no DeepFaceLab or TensorFlow execution.
+- [x] Pass step 12 on RTX 5880 Ada: 3 source and 3 destination images copied to `D:\DFL-P0-Authorized\workspace-p0`; historical default workspace unchanged; repository unchanged.
+- [x] Implement step 13 controlled face extraction with passed-step-10/12 prerequisites, immutable input verification, isolated historical DLL paths, fixed S3FD whole-face parameters, per-role timeouts, temporary outputs, DFLJPG metadata validation, failure cleanup, and no training.
+- [x] Keep step 13 fail closed: existing aligned outputs are never deleted; both roles must pass before temporary outputs are committed; input hashes, historical default workspace, and Git status must remain unchanged.
+- [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub transport failures without disabling certificate verification.
 
 ## Verified local results
 
@@ -69,25 +64,14 @@ Status: **system diagnostics complete with zero warnings**.
 - Physical memory: approximately 63.8 GB.
 - NVIDIA RTX 5880 Ada Generation; 46068 MiB VRAM.
 - NVIDIA driver 582.16; compute capability 8.9.
-- System Python profile: Python 3.11.9 at `C:\Users\newAda\AppData\Local\Programs\Python\Python311\python.exe`.
-- Python launcher also sees Python 3.10, 3.12, and 3.13.
-- System FFmpeg is available at `C:\ffmpeg_latest\bin\ffmpeg.exe`.
-- System `nvcc` is CUDA 13.1 at `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.1\bin\nvcc.exe`.
-- Environment variables also reference CUDA 13.0/13.3 and cuDNN for CUDA 12.9. These modern system components must not be substituted for the self-contained historical P0 runtime.
-- Repository branch and commit were correct and the working tree was clean.
-- Fixed-drive runtime discovery searched `C:\`, `D:\`, and `E:\`; candidates: 2; likely portable bundles: 0.
-
-This system profile validates hardware and tooling only. Python 3.11, modern FFmpeg, CUDA 13.x, and system cuDNN are not the historical DeepFaceLab runtime.
+- System Python 3.11.9.
+- System FFmpeg: `C:\ffmpeg_latest\bin\ffmpeg.exe`.
+- System `nvcc`: CUDA 13.1.
+- System CUDA/cuDNN components remain isolated from the historical P0 runtime.
 
 ### `rtx5880-ada × legacy-dfl-rtx3000-20211120`
 
-Status: **historical runtime extracted; read-only probe, static inspection, Python layout inspection, controlled TensorFlow/GPU visibility probe, and authorized dataset preflight passed**.
-
-Package:
-
-```text
-D:\DFL-Historical-Downloads\DeepFaceLab\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_series_build_11_20_2021.exe
-```
+Status: **historical runtime, Python layout, TensorFlow/GPU visibility, dataset preflight, and isolated workspace preparation passed**.
 
 Runtime root:
 
@@ -97,25 +81,21 @@ D:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series
 
 Observed:
 
-- Package size: `3919330734` bytes.
-- SHA-256 matched the historical baseline exactly.
-- Archive integrity test exit code: `0`.
-- Extraction exit code: `0`.
-- Archive entries checked: `29098`.
-- Extracted files: `23376`; directories: `5722`.
-- Embedded Python candidates: `1`; FFmpeg candidates: `1`.
-- Local ignored profile created: `config\local\rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1`.
-- Active-antivirus zero-risk scan was explicitly confirmed by the user before step 10; no exclusion or quarantine restoration was requested.
-- Read-only probe status: `passed`; embedded Python: `3.6.8`; bundled FFmpeg exit code: `0`.
-- Static environment inspection status: `passed`; BAT files read: `60`; top-level BAT files: `56`; read/hash errors: `0`; relevant environment lines: `128`.
-- Python layout inspection schema v4 status: `passed`; default `sys.path` includes `Lib\site-packages`; 138 top-level items, 65 metadata directories, 9 selected dependency groups, 56 top-level BAT files, 112 relevant launcher lines, and 0 warnings.
-- Controlled TensorFlow/GPU visibility status: `passed`; TensorFlow `2.6.0`; CUDA build `True`; physical GPU count `1`; local GPU count `1`; timeout `False`; effective exit code `0`; workspace unchanged `True`.
+- Historical package fingerprint matched exactly.
+- Embedded Python: `3.6.8`.
+- Read-only runtime probe: `passed`.
+- Static environment inspection: `passed`.
+- Python layout inspection schema v4: `passed`.
+- TensorFlow/GPU visibility: `passed`; TensorFlow `2.6.0`; CUDA build `True`; one physical and one local GPU.
 - Step 10 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\tensorflow-gpu-probe\legacy-tensorflow-gpu-visibility-20260720T125554Z.json`.
-- Authorized dataset preflight status: `passed`.
-- Source identity: 3 PNG files, 840910 bytes; destination identity: 3 PNG files, 888285 bytes.
-- Identical source/destination file-hash overlap: `0`; bundled `ffprobe` available; repository unchanged `True`; historical default workspace unchanged `True`.
 - Step 11 manifest: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\dataset-preflight\p0-authorized-dataset-manifest-20260720T132514Z.json`.
-- DeepFaceLab `main.py`, bundled launcher BAT files, face extraction, models, training, merge, and DFM export have not been started.
+- Isolated workspace: `D:\DFL-P0-Authorized\workspace-p0`.
+- Step 12 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\workspace-preparation\p0-isolated-workspace-preparation-20260720T133322Z.json`.
+- Source inputs: `src_0001.png` through `src_0003.png`.
+- Destination inputs: `dst_0001.png` through `dst_0003.png`.
+- Source and destination `aligned` directories are empty before step 13.
+- Historical default workspace and Git repository remained unchanged through step 12.
+- Face extraction, model creation, training, merge, and DFM export have not yet been executed.
 
 ## Historical package baseline verified on `hp-a2000`
 
@@ -129,39 +109,37 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 - SHA-256: `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
 - Authenticode: `NotSigned`.
 - SFX stub metadata: 7-Zip 19.00.
-- Archive integrity test exit code: `0`.
-- Real archive entries validated: `29098`.
+- Archive integrity exit code: `0`.
 - Huorong package-folder scan: `0` risks.
-- Microsoft Safety Scanner custom scan: `No infection found`, return code `0`.
-- The hash is a stable local fingerprint, not proof of publisher identity.
+- Microsoft Safety Scanner: `No infection found`, return code `0`.
+- The fingerprint is a stable local identity check, not proof of publisher identity.
 
 ## In progress
 
 - [ ] Complete step 9 on `hp-a2000` when that computer is used again.
-- [ ] Run step 12 on RTX 5880 Ada to prepare a new isolated workspace from the accepted step-11 manifest.
-- [ ] Build and review a separately time-limited source/destination face-extraction stage using explicit input/output paths and no historical default-workspace mutation.
-- [ ] Execute short training, save/exit, resume, merge, DFM export, and VisoMaster Fusion loading under the staged acceptance plan.
+- [ ] Run step 13 on RTX 5880 Ada and review source/destination extraction logs plus DFLJPG metadata validation.
+- [ ] Visually review the six aligned synthetic faces after step 13 passes.
+- [ ] Design and run a separately bounded short-training stage with save/exit and resume gates.
+- [ ] Execute merge, DFM export, and VisoMaster Fusion loading under the staged acceptance plan.
 
 ## Next local work on RTX 5880 Ada
 
-1. Pull the step-12 implementation and this progress update.
-2. Run `12_准备隔离P0测试工作区.bat` with the RTX 5880 Ada historical profile and a new target such as `D:\DFL-P0-Authorized\workspace-p0`.
-3. Confirm that 3 source and 3 destination images were copied with verified hashes, while the historical default workspace and Git repository remained unchanged.
-4. Review the preparation report before any face extraction.
-5. Do not start training until the separate extraction stage has passed and its aligned output is reviewed.
+1. Pull the step-13 implementation and this progress update.
+2. Run PowerShell 5.1 syntax validation and Python 3.6 compilation validation for the new scripts.
+3. Run `13_受控提取P0人脸.bat` against `D:\DFL-P0-Authorized\workspace-p0`.
+4. Review only the terminal summary and report/log paths; do not upload the actual face images.
+5. Do not start training until both aligned roles and DFLJPG metadata validation pass.
 
 ## Known risks
 
 - The historical stack contains old Python, TensorFlow, CUDA, cuDNN, NumPy, SciPy, h5py, OpenCV, ONNX, and tf2onnx components.
-- Modern Python/CUDA upgrades may break binary compatibility, checkpoint behavior, numerical output, or DFM export.
+- Modern dependency upgrades may break binary compatibility, checkpoint behavior, numerical output, or DFM export.
 - The downloaded EXE is unsigned and no official published checksum was located.
 - Clean local scans reduce risk but do not prove publisher identity or absolute safety.
-- The portable bundle may have stripped or nonstandard Python package metadata, so pip/pkg_resources output alone cannot establish dependency presence.
-- Compatibility may differ between RTX A2000 compute capability 8.6 and RTX 5880 Ada compute capability 8.9.
-- System CUDA 13.x and cuDNN 9.x on the second computer must remain isolated from the historical portable runtime.
-- TensorFlow/GPU visibility has passed, but extraction, training, checkpoint save/resume, merge, export, and DFM loading remain unverified.
+- TensorFlow/GPU visibility has passed, but extraction, training, checkpoint save/resume, merge, export, and DFM loading remain distinct acceptance gates.
 - Three images per identity are suitable for pipeline validation only, not quality evaluation.
-- P0 cannot be accepted from import tests alone; a real save/resume, merge, export, and DFM-load workflow is required.
+- S3FD/FAN extraction may still fail or hang independently of TensorFlow device visibility; step 13 therefore remains isolated and time-limited.
+- P0 cannot be accepted until save/resume, merge, DFM export, and VisoMaster Fusion loading are verified.
 
 ## Milestone status
 
