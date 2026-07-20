@@ -49,6 +49,7 @@ Last updated: 2026-07-20
 - [x] Fix the guarded extractor so 7-Zip archive metadata is not misclassified as an internal absolute path.
 - [x] Extract the verified SFX with 7-Zip into `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` without executing the original EXE.
 - [x] Confirm extraction used the expected SHA-256, archive integrity test exit code `0`, and extraction exit code `0`.
+- [x] Run a Huorong custom scan against the extracted runtime; result: `0` risks across `74941` scanned objects.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure.
 
 ## Verified local results
@@ -128,6 +129,7 @@ Extraction result:
 - Embedded Python candidates: `1`.
 - FFmpeg candidates: `1`.
 - Extraction report: `D:\DeepFaceLab-Next\artifacts\p0\hp-a2000\system-py312\legacy-runtime-extraction\legacy-runtime-extraction-20260720T071707Z.json`.
+- Huorong custom scan of the extracted runtime: `74941` objects scanned, `0` risks found, `0` risks processed.
 - No extracted file has been intentionally executed yet.
 
 ### Active protection provider
@@ -148,6 +150,7 @@ Extraction result:
 - Microsoft Safety Scanner return code: `0 (0x0)`.
 - The package remained present after scanning.
 - Post-scan SHA-256 still matched `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
+- Huorong custom scan of the extracted runtime scanned `74941` objects and reported `0` risks.
 - The scanner UI temporarily displayed intermediate infected-file counts while unpacking the SFX, but the final report is the accepted verdict.
 - Clean local scans reduce risk but do not prove publisher identity or guarantee complete safety.
 
@@ -165,7 +168,6 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 
 ## In progress
 
-- [ ] Scan `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` with Huorong before running any BAT, EXE, Python, or DLL.
 - [ ] Review the generated extraction inventory and top-level structure for a plausible DeepFaceLab portable runtime.
 - [ ] Create a `legacy-dfl-baseline` local profile for the extracted runtime.
 - [ ] Verify embedded Python, TensorFlow, CUDA/cuDNN, FFmpeg, and GPU detection.
@@ -175,12 +177,10 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 
 ## Next local acceptance work
 
-1. Scan `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` with Huorong custom scan.
-2. Do not run any extracted BAT, EXE, Python, or DLL until the extracted-directory scan completes with zero risks.
-3. Read and review `legacy-runtime-extraction-20260720T071707Z.json`.
-4. Confirm the exact embedded Python, FFmpeg, `main.py`, `workspace`, and `_internal` paths.
-5. Create an ignored `legacy-dfl-baseline` local profile pointing to the embedded tools.
-6. Run non-mutating version and import probes before using authorized test media.
+1. Read and review `legacy-runtime-extraction-20260720T071707Z.json`.
+2. Confirm the exact embedded Python, FFmpeg, `main.py`, `workspace`, and `_internal` paths.
+3. Create an ignored `legacy-dfl-baseline` local profile pointing to the embedded tools.
+4. Run non-mutating version and import probes before using authorized test media.
 
 ## Known risks
 
