@@ -35,6 +35,7 @@ def main():
     parser.add_argument("--dfl-root", required=True)
     parser.add_argument("--main-py", required=True)
     parser.add_argument("--answers-b64", required=True)
+    parser.add_argument("--force-timed-input", action="store_true")
     parser.add_argument("main_arguments", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
@@ -51,9 +52,12 @@ def main():
 
     answers = _decode_answers(args.answers_b64)
     answer_index = [0]
+    timed_input_count = [0]
     original_input = builtins.input
     original_argv = list(sys.argv)
     original_cwd = os.getcwd()
+    interact_object = None
+    original_input_in_time = None
 
     def scripted_input(prompt=""):
         index = answer_index[0]
@@ -69,18 +73,34 @@ def main():
         sys.stdout.flush()
         return answer
 
+    def forced_input_in_time(prompt, max_time_sec):
+        timed_input_count[0] += 1
+        sys.stdout.write(
+            "%s [DFLNEXT deterministic timed response: yes]\n" % prompt
+        )
+        sys.stdout.flush()
+        return True
+
     exit_code = 0
     try:
         builtins.input = scripted_input
         os.chdir(dfl_root)
         if dfl_root not in sys.path:
             sys.path.insert(0, dfl_root)
+
+        if args.force_timed_input:
+            from core.interact import interact as interact_object
+            original_input_in_time = interact_object.input_in_time
+            interact_object.input_in_time = forced_input_in_time
+
         sys.argv = [main_py] + main_arguments
 
         print(
             "DFLNEXT scripted prompt driver: armed with %d answers."
             % len(answers)
         )
+        if args.force_timed_input:
+            print("DFLNEXT scripted prompt driver: timed override enabled.")
         sys.stdout.flush()
 
         try:
@@ -88,6 +108,8 @@ def main():
         except SystemExit as exc:
             exit_code = _system_exit_code(exc.code)
     finally:
+        if interact_object is not None and original_input_in_time is not None:
+            interact_object.input_in_time = original_input_in_time
         builtins.input = original_input
         sys.argv = original_argv
         os.chdir(original_cwd)
@@ -97,6 +119,10 @@ def main():
         "DFLNEXT scripted prompt driver: consumed %d/%d answers."
         % (consumed, len(answers))
     )
+    print(
+        "DFLNEXT scripted prompt driver: timed responses %d."
+        % timed_input_count[0]
+    )
     sys.stdout.flush()
 
     if consumed != len(answers):
@@ -105,6 +131,14 @@ def main():
             file=sys.stderr,
         )
         return 98
+
+    expected_timed_count = 1 if args.force_timed_input else 0
+    if timed_input_count[0] != expected_timed_count:
+        print(
+            "DFLNEXT scripted prompt driver error: unexpected timed response count.",
+            file=sys.stderr,
+        )
+        return 99
 
     return exit_code
 
