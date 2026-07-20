@@ -46,7 +46,10 @@ Last updated: 2026-07-20
 - [x] Implement step 14 controlled first training/save gate: fixed two-iteration SAEHD configuration, redirected first-run answers, recurring graceful-close condition, 900-second timeout, temporary model directory, checkpoint pickle/options/loss validation, aligned-input hash checks, historical default-workspace comparison, and Git cleanliness checks.
 - [x] Keep step 14 fail closed: the final model directory must be empty; partial generated models are never committed; resume, merge, and DFM export remain separate gates.
 - [x] Observe the first step-14 attempt fail closed: preloaded stdin answers were consumed by historical `input_skip_pending()`, the temporary model reached iteration 13, exact-iteration validation blocked the checkpoint, no model was committed, aligned inputs remained unchanged, and the historical workspace and Git tree remained unchanged.
-- [x] Replace preloaded stdin with a deterministic Python 3.6 scripted-input driver that stores 29 answers in memory, bypasses stdin consumption, records each prompt answer, and fails when the consumed-answer count differs.
+- [x] Replace preloaded stdin with a deterministic Python 3.6 scripted-input driver that stores answers in memory, bypasses stdin consumption, records each prompt answer, and fails when the consumed-answer count differs.
+- [x] Pass step 14 on RTX 5880 Ada: `p0gate_SAEHD` saved at exact iteration `2`; loss history count `2`; 8 checkpoint files committed; aligned inputs, historical default workspace, and Git working tree unchanged; resume, merge, and DFM export not started.
+- [x] Implement step 15 controlled resume gate: read-only validation of the accepted iteration-2 checkpoint, SHA-256-verified temporary clone, deterministic timed override, target iteration `2 → 4`, 900-second timeout, before/after checkpoint validation, loss-history continuity checks, changed-weight verification, and rollback-capable atomic commit.
+- [x] Keep step 15 fail closed: the accepted iteration-2 checkpoint is not trained in place; blocked resumes remove only the temporary clone and preserve the accepted checkpoint; merge and DFM export remain separate gates.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub transport failures without disabling certificate verification.
 
 ## Verified local results
@@ -79,7 +82,7 @@ Status: **system diagnostics complete with zero warnings**.
 
 ### `rtx5880-ada × legacy-dfl-rtx3000-20211120`
 
-Status: **historical runtime, Python layout, TensorFlow/GPU visibility, dataset preflight, isolated workspace preparation, controlled face extraction, and visual aligned-face review passed**.
+Status: **historical runtime, TensorFlow/GPU visibility, extraction, visual review, and initial SAEHD training/save passed**.
 
 Runtime root:
 
@@ -106,10 +109,12 @@ Observed:
 - Extraction parameters: S3FD, `whole_face`, maximum 1 face per image, aligned size 512, JPEG quality 90, GPU index 0.
 - Step 13 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\face-extraction\p0-controlled-face-extraction-20260720T143447Z.json`.
 - Manual visual review: all six aligned outputs passed; no blank image, inversion, severe crop, or obvious misdetection was reported.
-- Input hashes, historical default workspace, and Git working tree remained unchanged through step 13.
 - First step-14 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\initial-training-save\p0-initial-training-save-20260720T145727Z.json`.
 - First step-14 status: `blocked_invalid_checkpoint`; temporary iteration `13`; loss history `13`; checkpoint committed `False`; aligned inputs, historical default workspace, and Git tree unchanged.
-- No persistent model checkpoint has been committed; resume, merge, and DFM export have not been executed.
+- Accepted step-14 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\initial-training-save\p0-initial-training-save-20260720T150802Z.json`.
+- Accepted model: `p0gate_SAEHD`; iteration `2`; loss history count `2`; checkpoint file count `8`; checkpoint committed `True`.
+- Aligned inputs, historical default workspace, and Git working tree remained unchanged through accepted step 14.
+- Checkpoint resume, merge, and DFM export have not yet been executed.
 
 ## Historical package baseline verified on `hp-a2000`
 
@@ -131,18 +136,18 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 ## In progress
 
 - [ ] Complete step 9 on `hp-a2000` when that computer is used again.
-- [ ] Re-run step 14 on RTX 5880 Ada with deterministic scripted input and validate exact iteration 2, finite losses, graceful save/exit, and checkpoint commit.
-- [ ] Implement and run a separate resume gate that must load the saved SAEHD checkpoint and advance its iteration without recreating it.
-- [ ] Execute merge, DFM export, and VisoMaster Fusion loading under the staged acceptance plan.
+- [ ] Run step 15 on RTX 5880 Ada and validate checkpoint load, iteration `2 → 4`, preserved first two loss rows, finite new losses, changed weights, graceful save/exit, and atomic commit.
+- [ ] Implement and run a separately bounded merge gate after step 15 passes.
+- [ ] Execute DFM export and VisoMaster Fusion loading under separate staged acceptance gates.
 
 ## Next local work on RTX 5880 Ada
 
-1. Pull the deterministic step-14 input fix and this progress update.
-2. Parse both step-14 PowerShell files and compile both Python 3.6 scripts.
-3. Confirm `D:\DFL-P0-Authorized\workspace-p0\model` is still empty and no `.model-p0-first-run-staging-*` directory remains.
-4. Re-run `14_受控首次短训练并保存.bat` against `D:\DFL-P0-Authorized\workspace-p0` and confirm the visual-review phrase.
-5. Review the terminal summary and generated report/log paths; do not upload face images or model files.
-6. Do not manually resume training, merge, or export DFM until step 14 is accepted.
+1. Pull the step-15 implementation and this progress update.
+2. Parse the step-15 PowerShell script and compile the updated scripted-input driver plus resume validator with embedded Python 3.6.
+3. Confirm the formal model directory still contains the accepted 8-file iteration-2 checkpoint and no resume staging/backup directories exist.
+4. Run `15_受控恢复短训练并保存.bat` against `D:\DFL-P0-Authorized\workspace-p0` and confirm the resume phrase.
+5. Review the terminal summary and report/log paths; do not upload face images or checkpoint files.
+6. Do not manually resume again, merge, or export DFM until step 15 is accepted.
 
 ## Known risks
 
@@ -150,9 +155,8 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 - Modern dependency upgrades may break binary compatibility, checkpoint behavior, numerical output, or DFM export.
 - The downloaded EXE is unsigned and no official published checksum was located.
 - Clean local scans reduce risk but do not prove publisher identity or absolute safety.
-- TensorFlow/GPU visibility, extraction, and visual review have passed, but initial training/save, checkpoint resume, merge, export, and DFM loading remain distinct acceptance gates.
-- Three images per identity are suitable for pipeline validation only, not quality evaluation.
-- The two-iteration SAEHD gate validates execution and persistence only; it cannot demonstrate useful visual quality.
+- TensorFlow/GPU visibility, extraction, visual review, and initial training/save have passed, but checkpoint resume, merge, export, and DFM loading remain distinct acceptance gates.
+- Three images per identity and four total training iterations are suitable for pipeline validation only, not visual quality evaluation.
 - P0 cannot be accepted until save/resume, merge, DFM export, and VisoMaster Fusion loading are verified.
 
 ## Milestone status
