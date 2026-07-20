@@ -14,8 +14,9 @@ echo.
 echo It will NOT import TensorFlow or execute DeepFaceLab main.py,
 echo bundled BAT files, extraction, merge, or training commands.
 echo.
-echo The diagnostics wrapper prints progress every 10 seconds and
-echo stops the isolated read-only process after 5 minutes.
+echo The staged wrapper reports the exact active stage. Each embedded
+echo Python probe is limited to 45 seconds, and the overall read-only
+echo process is limited to 3 minutes.
 echo.
 
 set "PROFILE=config\local\hp-a2000-legacy-dfl-rtx3000-20211120.psd1"
@@ -43,12 +44,12 @@ if /i not "%CONFIRM%"=="DIAGNOSE" (
     exit /b 2
 )
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\run-legacy-python-layout-diagnostics.ps1" -ProfilePath "%PROFILE%" -TimeoutSeconds 300
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\run-legacy-python-layout-diagnostics.ps1" -ProfilePath "%PROFILE%" -TimeoutSeconds 180 -PythonProbeTimeoutSeconds 45
 
 if errorlevel 1 (
     echo.
     echo ERROR: Legacy Python layout diagnostics did not pass.
-    echo Copy the error shown above into the development chat.
+    echo Copy the stage and report output shown above into the development chat.
     echo.
     pause
     exit /b 1
