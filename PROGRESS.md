@@ -11,7 +11,7 @@ Last updated: 2026-07-20
 - Active branch: `agent/p0-reproducible-baseline`.
 - Draft pull request: `#1 P0: establish reproducible baseline framework`.
 - Current milestone: **P0 — Reproducible historical baseline**.
-- Development uses a machine-profile × environment-profile matrix.
+- Both computers are equal, complete development nodes with independent local environments.
 
 ## Completed
 
@@ -24,9 +24,10 @@ Last updated: 2026-07-20
 - [x] Fix PowerShell 5.1 empty-result, collection binder, native stderr, and Python probe issues.
 - [x] Add ignored local machine/environment profile template.
 - [x] Add profile-driven P0 runner and per-profile artifact directories.
-- [x] Document the two-machine development workflow.
 - [x] Create and run `hp-a2000 × system-py312` local profile.
 - [x] Pass the P0 environment scaffold on `hp-a2000 × system-py312` at commit `9d6cc7b6494dcd3e0f75b60c395f976159470e60`.
+- [x] Correct the multi-machine design: no permanent work split between computers.
+- [x] Make `full-development` the default profile label while preserving older labels for compatibility.
 
 ## Verified profile result
 
@@ -46,54 +47,78 @@ Observed:
 - No workspace, artifacts, or DFM files were tracked.
 - FFmpeg and `nvcc` were not available on PATH; these remain non-blocking for this system-profile diagnostic.
 
-This result validates the engineering profile and scripts only. It is **not** the historical DeepFaceLab end-to-end baseline.
+This result validates the local system profile and scripts only. It is **not** the historical DeepFaceLab end-to-end baseline.
 
-## Maintainer machine matrix
+## Two-computer development model
 
-### `hp-a2000`
+Both computers may perform the same work:
 
-- Primary role: engineering, low-resource and PowerShell compatibility validation.
-- Current profile: `system-py312` — scaffold passed.
-- Future profile: `legacy-dfl-baseline` — not created yet.
+- Source-code and PowerShell development.
+- Dependency and compatibility work.
+- Extraction and training tests.
+- Save/resume, merge, DFM export, and consumer validation.
+- Documentation, commits, pull requests, and releases.
 
-### `rtx5880-ada`
+Only local state is independent:
 
-- NVIDIA RTX 5880 Ada Generation; approximately 46 GB VRAM.
-- Approximately 64 GB RAM.
-- Known ComfyUI environment: Python 3.13 and PyTorch CUDA 13.
-- Primary role: performance, full training, high-resolution testing and DFM export.
-- Existing ComfyUI environment must remain separate from DeepFaceLab.
-- System/profile diagnostic: pending.
+- Repository working directory.
+- Python/CUDA/FFmpeg/runtime paths.
+- `config/local/` profile files.
+- `artifacts/`, `workspace/`, datasets, checkpoints, and DFM files.
+
+GitHub synchronizes source code and shared documentation. Local environments and generated data are never synchronized through Git.
+
+Known physical machines:
+
+- `hp-a2000`: current `system-py312` profile passed.
+- `rtx5880-ada`: local profile and diagnostic pending until that computer is available.
+
+Neither computer has a permanent engineering, performance, or baseline assignment. Hardware differences are recorded as environment facts only.
 
 ## In progress
 
-- [ ] Create an ignored local profile on `rtx5880-ada`.
-- [ ] Run profile-labelled diagnostics on `rtx5880-ada`.
+- [ ] Continue P0 development on whichever computer is currently available.
 - [ ] Identify the exact historical runtime bundle or dependency environment for the first baseline.
-- [ ] Select the first machine for the `legacy-dfl-baseline` profile.
+- [ ] Create `legacy-dfl-baseline` independently on each computer when available.
 - [ ] Prepare a small, authorized, non-public test dataset.
 - [ ] Execute extraction, short training, save/resume, merge, DFM export, and VisoMaster Fusion loading.
+- [ ] Reproduce the accepted baseline on the second computer later without blocking current work.
+
+## Switching computers
+
+Before leaving the current computer:
+
+1. Review `git status` and staged changes.
+2. Commit and push all source and shared-document changes.
+3. Update `PROGRESS.md` and `NEXT_CHAT_CONTEXT.md` when project state changed.
+4. Do not copy the repository with uncommitted changes to the other computer.
+
+On the other computer:
+
+1. `git fetch origin`.
+2. Switch to the current feature branch.
+3. `git pull --ff-only`.
+4. Use that computer's own ignored `config/local/*.psd1` profile.
+5. Continue the same development work from the shared commit.
+
+When both computers are used simultaneously, use separate feature branches and merge through pull requests.
 
 ## Next local acceptance work
 
-1. On the RTX 5880 machine, clone or update the same branch.
-2. Create a local profile describing its current system or ComfyUI environment for diagnostics only.
-3. Run `scripts/windows/run-profiled-p0.ps1 -DiagnosticsOnly` and review the separated report directory.
-4. Compare only hardware and runtime inventory; do not treat the ComfyUI environment as DeepFaceLab-compatible.
-5. Identify a self-contained historical DeepFaceLab Windows runtime without reusing FaceFusion, VisoMaster, or ComfyUI environments.
-6. Prefer the RTX 5880 machine for the first full training/export baseline unless the historical runtime cannot recognize the Ada GPU.
-7. Use the A2000 machine as the fallback compatibility and low-VRAM validation machine.
-8. Create a `legacy-dfl-baseline` profile and validate extraction, short training, checkpoint save/resume, merge, DFM export, and consumer loading.
-9. Attach only redacted JSON reports and measured results to the P0 pull request.
+1. Continue on the currently available A2000 computer; the RTX 5880 diagnostic is not a prerequisite.
+2. Investigate and document a self-contained historical DeepFaceLab Windows runtime.
+3. Keep the historical runtime separate from system Python, FaceFusion, VisoMaster, and ComfyUI.
+4. Create an A2000 `legacy-dfl-baseline` local profile when the runtime is known.
+5. Validate extraction, short training, checkpoint save/resume, merge, DFM export, and consumer loading.
+6. When the RTX 5880 computer becomes available, pull the same source branch and create its own independent profile for the same development workflow.
+7. Attach only redacted JSON reports and measured results to the P0 pull request.
 
 ## Known risks
 
 - The inherited CUDA requirements pin old packages including NumPy 1.19.3, h5py 2.10.0, OpenCV 4.1.0.25, SciPy 1.4.1, TensorFlow GPU 2.4.0, and tf2onnx 1.9.3.
 - Modern Python/CUDA upgrades may break binary compatibility, checkpoint behavior, numerical output, or DFM export.
-- RTX A2000 has limited VRAM, so training settings must be conservative on that machine.
-- The historical TensorFlow/CUDA stack may not recognize the RTX 5880 Ada without compatibility work.
-- Windows build 26200 is newer than the historical runtime and may expose compatibility issues.
-- The RTX 5880's existing Python 3.13/CUDA 13 ComfyUI environment must not be mistaken for a compatible DeepFaceLab environment.
+- Hardware limits may require different test settings, but must not create divergent source behavior.
+- The historical TensorFlow/CUDA stack may require different compatibility work on each GPU.
 - P0 cannot be accepted from import tests alone; a real save/resume and export workflow is required.
 
 ## Milestone status
