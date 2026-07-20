@@ -39,6 +39,8 @@ Last updated: 2026-07-20
 - [x] Pass step 12 on RTX 5880 Ada: 3 source and 3 destination images copied to `D:\DFL-P0-Authorized\workspace-p0`; historical default workspace unchanged; repository unchanged.
 - [x] Implement step 13 controlled face extraction with passed-step-10/12 prerequisites, immutable input verification, isolated historical DLL paths, fixed S3FD whole-face parameters, per-role timeouts, temporary outputs, DFLJPG metadata validation, failure cleanup, and no training.
 - [x] Keep step 13 fail closed: existing aligned outputs are never deleted; both roles must pass before temporary outputs are committed; input hashes, historical default workspace, and Git status must remain unchanged.
+- [x] Resolve the observed Windows PowerShell 5.1 parser and strict-mode compatibility issues in step 13 before accepting the run.
+- [x] Pass step 13 on RTX 5880 Ada: source and destination extraction both `passed`; 3 aligned DFLJPG files per role; DFLJPG source mapping and `whole_face` metadata validated; copied input hashes unchanged; historical default workspace unchanged; repository unchanged.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub transport failures without disabling certificate verification.
 
 ## Verified local results
@@ -71,7 +73,7 @@ Status: **system diagnostics complete with zero warnings**.
 
 ### `rtx5880-ada × legacy-dfl-rtx3000-20211120`
 
-Status: **historical runtime, Python layout, TensorFlow/GPU visibility, dataset preflight, and isolated workspace preparation passed**.
+Status: **historical runtime, Python layout, TensorFlow/GPU visibility, dataset preflight, isolated workspace preparation, and controlled face extraction passed**.
 
 Runtime root:
 
@@ -93,9 +95,12 @@ Observed:
 - Step 12 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\workspace-preparation\p0-isolated-workspace-preparation-20260720T133322Z.json`.
 - Source inputs: `src_0001.png` through `src_0003.png`.
 - Destination inputs: `dst_0001.png` through `dst_0003.png`.
-- Source and destination `aligned` directories are empty before step 13.
-- Historical default workspace and Git repository remained unchanged through step 12.
-- Face extraction, model creation, training, merge, and DFM export have not yet been executed.
+- Source aligned outputs: 3 valid DFLJPG files.
+- Destination aligned outputs: 3 valid DFLJPG files.
+- Extraction parameters: S3FD, `whole_face`, maximum 1 face per image, aligned size 512, JPEG quality 90, GPU index 0.
+- Step 13 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\face-extraction\p0-controlled-face-extraction-20260720T143447Z.json`.
+- Input hashes, historical default workspace, and Git working tree remained unchanged through step 13.
+- Model creation, training, merge, and DFM export have not yet been executed.
 
 ## Historical package baseline verified on `hp-a2000`
 
@@ -117,18 +122,16 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 ## In progress
 
 - [ ] Complete step 9 on `hp-a2000` when that computer is used again.
-- [ ] Run step 13 on RTX 5880 Ada and review source/destination extraction logs plus DFLJPG metadata validation.
-- [ ] Visually review the six aligned synthetic faces after step 13 passes.
+- [ ] Visually review the six aligned synthetic faces produced by step 13.
 - [ ] Design and run a separately bounded short-training stage with save/exit and resume gates.
 - [ ] Execute merge, DFM export, and VisoMaster Fusion loading under the staged acceptance plan.
 
 ## Next local work on RTX 5880 Ada
 
-1. Pull the step-13 implementation and this progress update.
-2. Run PowerShell 5.1 syntax validation and Python 3.6 compilation validation for the new scripts.
-3. Run `13_受控提取P0人脸.bat` against `D:\DFL-P0-Authorized\workspace-p0`.
-4. Review only the terminal summary and report/log paths; do not upload the actual face images.
-5. Do not start training until both aligned roles and DFLJPG metadata validation pass.
+1. Pull the step-13 result update.
+2. Open the source and destination `aligned` folders and visually confirm that all six outputs contain the intended single synthetic face, are upright, and are not blank or severely cropped.
+3. Do not upload the face images; record only the visual-review result in the development chat.
+4. Do not start training until the visual review is accepted and the separately bounded training gate is implemented.
 
 ## Known risks
 
@@ -136,9 +139,8 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 - Modern dependency upgrades may break binary compatibility, checkpoint behavior, numerical output, or DFM export.
 - The downloaded EXE is unsigned and no official published checksum was located.
 - Clean local scans reduce risk but do not prove publisher identity or absolute safety.
-- TensorFlow/GPU visibility has passed, but extraction, training, checkpoint save/resume, merge, export, and DFM loading remain distinct acceptance gates.
+- TensorFlow/GPU visibility and extraction have passed, but training, checkpoint save/resume, merge, export, and DFM loading remain distinct acceptance gates.
 - Three images per identity are suitable for pipeline validation only, not quality evaluation.
-- S3FD/FAN extraction may still fail or hang independently of TensorFlow device visibility; step 13 therefore remains isolated and time-limited.
 - P0 cannot be accepted until save/resume, merge, DFM export, and VisoMaster Fusion loading are verified.
 
 ## Milestone status
