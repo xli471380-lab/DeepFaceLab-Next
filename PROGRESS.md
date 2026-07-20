@@ -4,55 +4,41 @@ Last updated: 2026-07-20
 
 ## Project state
 
-- Repository fork created: `xli471380-lab/DeepFaceLab-Next`.
-- Upstream baseline preserved on `master`.
-- Baseline commit: `e4b7543ffa1d73b26fce1e31852727f658ba490c`.
-- Integration branch created: `develop`.
+- Repository: `xli471380-lab/DeepFaceLab-Next`.
+- Frozen upstream baseline on `master`: `e4b7543ffa1d73b26fce1e31852727f658ba490c`.
+- Integration branch: `develop`.
 - Active branch: `agent/p0-reproducible-baseline`.
 - Draft pull request: `#1 P0: establish reproducible baseline framework`.
 - Current milestone: **P0 — Reproducible historical baseline**.
-- Both computers are equal, complete development nodes with independent local environments.
+- Both computers are equal development nodes with independent local profiles, runtime files, workspaces, datasets, checkpoints, DFM files, and artifacts.
 
 ## Completed
 
-- [x] Fork archived upstream repository.
-- [x] Confirm repository ownership and push permissions.
-- [x] Define branch strategy and staged modernization roadmap.
-- [x] Freeze the upstream source baseline.
-- [x] Add development plan, P0 protocol, security policy, diagnostics, and acceptance scaffold.
-- [x] Open the first draft pull request into `develop`.
-- [x] Fix PowerShell 5.1 empty-result, collection binder, native stderr, Python probe, and signed-HResult formatting issues.
-- [x] Add ignored local machine/environment profile template.
-- [x] Add profile-driven P0 runner and per-profile artifact directories.
-- [x] Create and run `hp-a2000 × system-py312` local profile.
-- [x] Pass the P0 environment scaffold on `hp-a2000 × system-py312`.
-- [x] Correct the multi-machine design: no permanent work split between computers.
-- [x] Add safe computer-switch BAT files.
-- [x] Add local historical-runtime discovery tooling.
-- [x] Scan all fixed drives on `hp-a2000` and confirm no reusable historical portable bundle is installed.
-- [x] Fix CMD UTF-8 parsing in the discovery BAT by using ASCII-only output.
-- [x] Obtain the official-linked RTX 3000 Windows package without executing it.
-- [x] Record the package filename, byte size, SHA-256, and unsigned Authenticode status.
-- [x] Add one-click static package inspection and Defender diagnostic tools.
+- [x] Fork and freeze the archived upstream source.
+- [x] Define the staged modernization roadmap, P0 protocol, security policy, and branch workflow.
+- [x] Add PowerShell 5.1-compatible diagnostics, profile-driven acceptance, per-profile artifacts, and safe computer-switch BAT files.
+- [x] Pass the system-profile scaffold on `hp-a2000 × system-py312`.
+- [x] Confirm no reusable historical DeepFaceLab portable bundle was already installed.
+- [x] Obtain the upstream-linked RTX 3000 Windows package without executing it.
+- [x] Record package size, SHA-256, unsigned status, and 7-Zip SFX metadata.
 - [x] Install 7-Zip 26.02 from the verified WinGet package.
-- [x] List and integrity-test the downloaded 7-Zip SFX archive without executing it.
-- [x] Confirm the 7-Zip integrity test returns exit code `0` with `29099` listed values.
-- [x] Diagnose Microsoft Defender as `Not running`, with antivirus and real-time protection disabled.
-- [x] Confirm Defender scan failures are service-state failures, not malware detections.
-- [x] Run Microsoft Safety Scanner quick scan; it removed `VirTool:Win32/DefenderTamperingRestore` from the `DisableAntiSpyware` registry value.
-- [x] Confirm Huorong Security 6.0.11.1 is installed and active through `HipsDaemon`, `HipsTray`, and `HRWSCCtrl`.
-- [x] Confirm Microsoft Defender is inactive because Huorong is the active real-time protection product; do not force both engines to run concurrently.
-- [x] Run a Huorong custom scan against the downloaded package folder; result: `0` risks.
-- [x] Run Microsoft Safety Scanner custom scan against the downloaded package folder; final result: `No infection found`, return code `0`.
-- [x] Recalculate the package SHA-256 after both scans and confirm it remains unchanged.
-- [x] Add guarded 7-Zip extraction tooling that verifies the expected hash, rejects unsafe paths, tests archive integrity, extracts outside the repository, and writes an inventory without executing the SFX.
-- [x] Fix the guarded extractor so 7-Zip archive metadata is not misclassified as an internal absolute path.
-- [x] Extract the verified SFX with 7-Zip into `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` without executing the original EXE.
-- [x] Confirm extraction used the expected SHA-256, archive integrity test exit code `0`, and extraction exit code `0`.
-- [x] Run a Huorong custom scan against the extracted runtime; result: `0` risks across `74941` scanned objects.
-- [x] Review the extraction inventory and confirm a plausible DeepFaceLab portable runtime structure.
-- [x] Confirm the runtime contains one embedded Python 3.6.8 executable, one FFmpeg executable, the expected DeepFaceLab `main.py`, a portable `workspace`, and an `_internal` directory.
-- [x] Add `7_创建历史运行配置并只读检查.bat` plus a guarded profile-and-version probe that does not execute DeepFaceLab `main.py`.
+- [x] List and integrity-test the downloaded SFX without running it.
+- [x] Diagnose Microsoft Defender as inactive because Huorong is the active protection provider.
+- [x] Confirm Huorong Security 6.0.11.1 is active through `HipsDaemon`, `HipsTray`, and `HRWSCCtrl`.
+- [x] Run Huorong custom scan against the downloaded package folder: `0` risks.
+- [x] Run Microsoft Safety Scanner custom scan against the downloaded package folder: `No infection found`, return code `0`.
+- [x] Confirm the package SHA-256 remained unchanged after scanning.
+- [x] Add guarded extraction tooling that verifies the expected hash, rejects unsafe archive paths, tests integrity, extracts outside the repository, and writes an inventory.
+- [x] Fix 7-Zip metadata parsing so the SFX path itself is not misclassified as an archive entry.
+- [x] Extract the verified SFX with 7-Zip without executing it.
+- [x] Scan the extracted runtime with Huorong: `74941` objects, `0` risks.
+- [x] Confirm a plausible DeepFaceLab portable runtime structure with embedded Python, FFmpeg, `_internal`, `main.py`, and `workspace`.
+- [x] Create an ignored local historical runtime profile.
+- [x] Pass the read-only Python/FFmpeg/NVIDIA/CUDA-DLL probe without running `main.py`.
+- [x] Add static BAT/environment inspection that does not execute BAT files, TensorFlow, or DeepFaceLab.
+- [x] Fix recursive BAT enumeration so inaccessible historical TensorFlow include-tree paths are recorded and skipped instead of aborting the inspection.
+- [x] Pass static BAT/environment inspection: 60 BAT files, 56 top-level BAT files, 1 skipped enumeration path, 0 BAT read/hash errors, and 128 relevant environment lines.
+- [x] Add a dedicated legacy Python layout inspection for `._pth`, `sys.path`, `site-packages`, package folders, static version files, and launcher BAT text.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure.
 
 ## Verified local results
@@ -61,57 +47,31 @@ Last updated: 2026-07-20
 
 Status: **environment scaffold passed**.
 
-Observed:
-
 - Windows 11 Pro build 26200; PowerShell 5.1.
 - Intel Core i5-12500; approximately 16 GB RAM.
-- NVIDIA RTX A2000; 5754 MiB VRAM from `nvidia-smi`.
+- NVIDIA RTX A2000; 5754 MiB VRAM.
 - NVIDIA driver 581.80; compute capability 8.6.
 - System Python 3.12.10 probe passed.
-- Git and repository integrity checks passed.
-- No workspace, artifacts, or DFM files were tracked.
-- FFmpeg and `nvcc` were not available on PATH; non-blocking for the system profile.
+- No workspace, artifacts, or DFM files are tracked.
 
-This validates the local system profile and scripts only. It is not the historical DeepFaceLab end-to-end baseline.
-
-### Historical runtime discovery
-
-Search roots: `C:\`, `D:\`, `E:\`, `F:\`, and `G:\`.
-
-Result:
-
-- Candidate count: 1.
-- Likely portable-bundle count: 0.
-- The only candidate was `D:\DeepFaceLab-Next`, identified as a source checkout.
-- No embedded Python, FFmpeg, `_internal` runtime, or portable workspace was found.
-
-Conclusion: P0 requires a separately obtained historical Windows runtime.
+This validates the system profile and repository tooling only; it is not the historical DeepFaceLab baseline.
 
 ### Downloaded historical package
-
-Local file:
 
 ```text
 F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_series_build_11_20_2021.exe
 ```
 
-Recorded metadata:
-
 - Size: `3919330734` bytes.
 - SHA-256: `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
-- Authenticode status: `NotSigned`.
-- File version metadata identifies a `7-Zip 19.00` SFX stub.
-- The file was obtained from an upstream README-linked Windows mirror.
-- The upstream README and GitHub release pages do not provide a published checksum or signature for this exact EXE, so the local hash is a fingerprint, not proof of authorship.
-
-Static archive inspection:
-
-- 7-Zip executable: `C:\Program Files\7-Zip\7z.exe`.
-- 7-Zip version: `26.02`.
-- Archive test exit code: `0`.
-- Initial raw `Path =` values: `29099`.
-- Real archive entries validated by the guarded extractor: `29098`.
-- No archive-corruption or unsafe-entry-path error was reported after the metadata parser fix.
+- Authenticode: `NotSigned`.
+- SFX stub metadata: 7-Zip 19.00.
+- Archive integrity test: exit code `0`.
+- Raw 7-Zip `Path =` values: `29099`.
+- Real archive entries validated: `29098`.
+- Huorong package-folder scan: `0` risks.
+- Microsoft Safety Scanner custom scan: `No infection found`, return code `0`.
+- The upstream-linked mirrors did not provide a published checksum or signature for this exact EXE. The recorded hash is a stable local fingerprint, not proof of authorship.
 
 ### Extracted historical runtime
 
@@ -121,7 +81,7 @@ Extraction destination:
 F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120
 ```
 
-Actual portable runtime root:
+Portable runtime root:
 
 ```text
 F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series
@@ -129,18 +89,16 @@ F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series
 
 Extraction result:
 
-- Source SHA-256 matched the expected value: `True`.
+- Expected SHA-256 matched: `True`.
 - Archive integrity test exit code: `0`.
 - Extraction exit code: `0`.
-- Real archive entries checked: `29098`.
 - Extracted files: `23376`.
 - Extracted directories: `5722`.
 - Extracted size: `8146405202` bytes.
 - BAT files: `60`; EXE files: `67`; DLL files: `365`; Python files: `7315`.
-- Extraction report: `D:\DeepFaceLab-Next\artifacts\p0\hp-a2000\system-py312\legacy-runtime-extraction\legacy-runtime-extraction-20260720T071707Z.json`.
-- Huorong custom scan of the extracted runtime: `74941` objects scanned, `0` risks found, `0` risks processed.
+- Huorong extracted-runtime scan: `74941` objects, `0` risks, `0` processed.
 
-Confirmed runtime paths:
+Confirmed paths:
 
 ```text
 Python:
@@ -154,77 +112,60 @@ F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\_int
 
 Workspace:
 F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\workspace
-
-Internal root:
-F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series\_internal
 ```
 
-No DeepFaceLab BAT, EXE, `main.py`, training command, or workspace task has been intentionally started yet.
+### Read-only runtime probe
 
-### Active protection provider
+- Local ignored profile:
+  `config\local\hp-a2000-legacy-dfl-rtx3000-20211120.psd1`.
+- Status: `passed`.
+- Embedded Python: `3.6.8`, 64-bit.
+- FFmpeg: `4.2.1`.
+- GPU: `NVIDIA RTX A2000`, driver `581.80`, 5754 MiB, compute capability `8.6`.
+- Bundled CUDA/cuDNN records: `8`.
+- Observed DLLs include CUDA 10.1/11 runtime components, cuBLAS 11, cuSolver 11, cuSparse 11, and cuDNN 8.
+- `main.py` was not executed; training was not started; workspace was not intentionally modified.
 
-- Product: `火绒安全软件` / Huorong Security.
-- Version: `6.0.11.1`.
-- Publisher: `北京火绒网络科技有限公司`.
-- `HipsDaemon`: `Running`, `Auto`.
-- `HipsTray`: running.
-- `HRWSCCtrl`: `Running`; this is Huorong's Windows Security Center integration service.
-- Conclusion: Huorong is the active real-time protection product. Microsoft Defender should not be force-started while Huorong remains installed and active.
+### Static environment inspection
 
-### Malware scan results
-
-- Huorong custom scan of the package folder: `0` risks.
-- Microsoft Safety Scanner custom scan started at `2026-07-20 14:27:05` and finished at `14:47:37`.
-- Microsoft Safety Scanner final result: `No infection found`.
-- Microsoft Safety Scanner return code: `0 (0x0)`.
-- The package remained present after scanning.
-- Post-scan SHA-256 still matched `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
-- Huorong custom scan of the extracted runtime scanned `74941` objects and reported `0` risks.
-- The scanner UI temporarily displayed intermediate infected-file counts while unpacking the SFX, but the final report is the accepted verdict.
-- Clean local scans reduce risk but do not prove publisher identity or guarantee complete safety.
-
-Microsoft Safety Scanner quick scan:
-
-- Scanner: Microsoft Safety Scanner v1.455, build `1.455.230.0`.
-- Detection: `VirTool:Win32/DefenderTamperingRestore`.
-- Resource: `HKLM\SOFTWARE\Microsoft\Windows Defender\DisableAntiSpyware`.
-- Action: removed successfully (`0x00000000`).
-- This quick-scan detection concerned Defender configuration, not the DeepFaceLab package.
-
-## Two-computer development model
-
-Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, profiles, artifacts, workspaces, datasets, checkpoints, and DFM files remain independent. GitHub synchronizes source code and shared documentation.
+- Status: `passed`.
+- BAT files read: `60`.
+- Top-level BAT files: `56`.
+- Skipped enumeration errors: `1`.
+- BAT read/hash errors: `0`.
+- Relevant environment lines: `128`.
+- The skipped path is in a historical TensorFlow/cuDNN frontend include tree and is irrelevant to BAT inspection.
+- `pkg_resources` reported only one distribution record and zero selected package records even though TensorFlow package directories are visibly present. Therefore pip/pkg_resources metadata is not authoritative for this portable bundle.
+- The likely explanations are stripped distribution metadata or a bundle-specific Python path layout. This must be resolved through filesystem and `sys.path` inspection before TensorFlow import.
 
 ## In progress
 
-- [ ] Pull and run `7_创建历史运行配置并只读检查.bat`.
-- [ ] Create the ignored `config\local\hp-a2000-legacy-dfl-rtx3000-20211120.psd1` profile from confirmed paths.
-- [ ] Record embedded Python, selected package versions, FFmpeg version, NVIDIA status, and bundled CUDA DLL inventory.
-- [ ] Run a separate controlled TensorFlow/import/GPU visibility probe after reviewing the read-only version report.
-- [ ] Prepare a small, authorized, non-public test dataset.
-- [ ] Execute extraction, short training, save/resume, merge, DFM export, and VisoMaster Fusion loading.
+- [ ] Pull and run `9_诊断历史Python依赖布局.bat`.
+- [ ] Record embedded Python `sys.path`, `._pth` files, `site-packages` visibility, package directories, static version files, and launcher environment lines.
+- [ ] Build a separate controlled TensorFlow/CUDA/GPU visibility probe using the confirmed bundle path setup.
+- [ ] Prepare a small authorized, non-public test dataset.
+- [ ] Execute face extraction, short training, save/exit, resume, merge, DFM export, and VisoMaster Fusion loading.
 - [ ] Reproduce the accepted baseline on the second computer later without blocking current work.
 
 ## Next local acceptance work
 
 1. Pull the latest branch with HTTP/1.1.
-2. Run `7_创建历史运行配置并只读检查.bat`.
-3. Confirm the displayed runtime root and type `PROBE`.
-4. Review the generated local profile and `legacy-runtime-readonly-probe-*.json` report.
-5. Do not start DeepFaceLab `main.py` or training yet.
-6. Add a separate controlled TensorFlow/import/GPU probe after the version report is accepted.
+2. Run `9_诊断历史Python依赖布局.bat` and type `DIAGNOSE`.
+3. Review `legacy-python-layout-inspection-*.json`.
+4. Confirm whether `Lib\site-packages` is on default `sys.path`, what `._pth` files contain, and which selected package folders/version files exist.
+5. Do not run bundled BAT files, TensorFlow import, or `main.py` yet.
+6. Add and run a separate controlled TensorFlow/CUDA/GPU probe after the layout report is accepted.
 
 ## Known risks
 
-- The inherited CUDA requirements pin old packages including NumPy 1.19.3, h5py 2.10.0, OpenCV 4.1.0.25, SciPy 1.4.1, TensorFlow GPU 2.4.0, and tf2onnx 1.9.3.
+- The inherited historical stack contains old Python, TensorFlow, CUDA, cuDNN, NumPy, SciPy, h5py, OpenCV, ONNX, and tf2onnx components.
 - Modern Python/CUDA upgrades may break binary compatibility, checkpoint behavior, numerical output, or DFM export.
-- Historical Windows bundles are externally hosted and must be treated as untrusted until inspected.
-- The downloaded EXE is unsigned and has no official published checksum located so far.
-- Huorong and Microsoft Safety Scanner reported no package infection, but clean scans are not proof of authorship or absolute safety.
+- The downloaded EXE is unsigned and has no located official published checksum.
+- Clean local scans reduce risk but do not prove publisher identity or absolute safety.
 - Huorong is the active antivirus provider; Defender scan failures are expected while Huorong remains active.
-- Hardware limits may require different test settings, but must not create divergent source behavior.
-- The historical TensorFlow/CUDA stack may require different compatibility work on each GPU.
-- P0 cannot be accepted from import tests alone; a real save/resume and export workflow is required.
+- The portable bundle may have stripped or nonstandard Python package metadata, so pip/pkg_resources output alone cannot establish dependency presence.
+- Historical TensorFlow/CUDA compatibility may differ between the RTX A2000 and RTX 5880 Ada systems.
+- P0 cannot be accepted from import tests alone; a real save/resume, merge, export, and DFM-load workflow is required.
 
 ## Milestone status
 
