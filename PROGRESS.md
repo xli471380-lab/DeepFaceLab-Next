@@ -42,6 +42,10 @@ Last updated: 2026-07-20
 - [x] Run Microsoft Safety Scanner quick scan; it removed `VirTool:Win32/DefenderTamperingRestore` from the `DisableAntiSpyware` registry value.
 - [x] Confirm Huorong Security 6.0.11.1 is installed and active through `HipsDaemon`, `HipsTray`, and `HRWSCCtrl`.
 - [x] Confirm Microsoft Defender is inactive because Huorong is the active real-time protection product; do not force both engines to run concurrently.
+- [x] Run a Huorong custom scan against the downloaded package folder; result: `0` risks.
+- [x] Run Microsoft Safety Scanner custom scan against the downloaded package folder; final result: `No infection found`, return code `0`.
+- [x] Recalculate the package SHA-256 after both scans and confirm it remains unchanged.
+- [x] Add guarded 7-Zip extraction tooling that verifies the expected hash, rejects unsafe paths, tests archive integrity, extracts outside the repository, and writes an inventory without executing the SFX.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure.
 
 ## Verified local results
@@ -101,17 +105,6 @@ Static archive inspection:
 - Listed entries: `29099`.
 - No archive-corruption error was reported.
 
-Defender diagnostics:
-
-- Administrator: `True`.
-- `AMRunningMode`: `Not running`.
-- `AntivirusEnabled`: `False`.
-- `RealTimeProtectionEnabled`: `False`.
-- `Start-MpScan` failed with `0x80131500`.
-- `MpCmdRun -ReturnHR` failed with `0x80004005`.
-- Matching Defender detections: `0`.
-- Conclusion: Microsoft Defender is not the active antivirus provider on this machine, so these failures are not valid clean or malicious verdicts.
-
 Active protection provider:
 
 - Product: `火绒安全软件` / Huorong Security.
@@ -122,13 +115,24 @@ Active protection provider:
 - `HRWSCCtrl`: `Running`; this is Huorong's Windows Security Center integration service.
 - Conclusion: Huorong is the active real-time protection product. Microsoft Defender should not be force-started while Huorong remains installed and active.
 
+Malware scan results:
+
+- Huorong custom scan of the package folder: `0` risks.
+- Microsoft Safety Scanner custom scan started at `2026-07-20 14:27:05` and finished at `14:47:37`.
+- Microsoft Safety Scanner final result: `No infection found`.
+- Microsoft Safety Scanner return code: `0 (0x0)`.
+- The package remained present after scanning.
+- Post-scan SHA-256 still matched `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
+- The scanner UI temporarily displayed intermediate infected-file counts while unpacking the SFX, but the final report is the accepted verdict.
+- Clean local scans reduce risk but do not prove publisher identity or guarantee complete safety.
+
 Microsoft Safety Scanner quick scan:
 
 - Scanner: Microsoft Safety Scanner v1.455, build `1.455.230.0`.
 - Detection: `VirTool:Win32/DefenderTamperingRestore`.
 - Resource: `HKLM\SOFTWARE\Microsoft\Windows Defender\DisableAntiSpyware`.
 - Action: removed successfully (`0x00000000`).
-- This quick scan repaired a Defender-related registry setting; it did not scan or validate the downloaded DeepFaceLab package.
+- This quick-scan detection concerned Defender configuration, not the DeepFaceLab package.
 
 ## Two-computer development model
 
@@ -136,11 +140,9 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 
 ## In progress
 
-- [ ] Update Huorong virus definitions and scan the downloaded EXE or its containing folder.
-- [ ] Run Microsoft Safety Scanner again in custom-scan mode against the downloaded package folder.
-- [ ] Review both scan results and retain screenshots or logs locally.
-- [ ] Review the 7-Zip listing for a plausible DeepFaceLab portable structure before extraction.
-- [ ] Extract with 7-Zip into a separate local runtime directory without executing the original SFX.
+- [ ] Pull the guarded extraction tooling.
+- [ ] Extract the verified SFX with 7-Zip into `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` without executing the original EXE.
+- [ ] Review the generated extraction inventory for a plausible DeepFaceLab portable structure.
 - [ ] Scan the extracted directory with Huorong before running any BAT, EXE, Python, or DLL.
 - [ ] Create a `legacy-dfl-baseline` local profile for the extracted runtime.
 - [ ] Verify embedded Python, TensorFlow, CUDA/cuDNN, FFmpeg, and GPU detection.
@@ -150,15 +152,14 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 
 ## Next local acceptance work
 
-1. Open Huorong Security and update its virus definitions.
-2. Use Huorong custom scan or the Explorer context-menu scan on `F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab`.
-3. Run `D:\SecurityTools\msert.exe` again and choose a custom scan for the same folder; the previous run was only a quick scan.
-4. Keep the downloaded EXE unexecuted until both scans complete without a package-related detection.
-5. Review the saved 7-Zip entry listing and confirm expected portable-runtime markers.
-6. Extract with `7z.exe x` into a short separate directory such as `F:\DFL-Legacy`.
-7. Scan the extracted directory with Huorong before executing any included files.
-8. Create an ignored `legacy-dfl-baseline` profile pointing to the embedded tools.
-9. Validate the historical environment before using authorized test media.
+1. Pull the latest branch using HTTP/1.1 if the normal GitHub pull returns `Empty reply from server`.
+2. Run `6_安全解压历史运行包.bat`.
+3. Type `EXTRACT` only after confirming the displayed source and destination paths.
+4. Do not run any file from the extracted directory.
+5. Review the generated JSON inventory and top-level directory structure.
+6. Scan `F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` with Huorong custom scan.
+7. Create an ignored `legacy-dfl-baseline` profile pointing to the embedded tools.
+8. Validate the historical environment before using authorized test media.
 
 ## Known risks
 
@@ -166,6 +167,7 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 - Modern Python/CUDA upgrades may break binary compatibility, checkpoint behavior, numerical output, or DFM export.
 - Historical Windows bundles are externally hosted and must be treated as untrusted until inspected.
 - The downloaded EXE is unsigned and has no official published checksum located so far.
+- Huorong and Microsoft Safety Scanner reported no package infection, but clean scans are not proof of authorship or absolute safety.
 - Huorong is the active antivirus provider; Defender scan failures are expected while Huorong remains active.
 - Hardware limits may require different test settings, but must not create divergent source behavior.
 - The historical TensorFlow/CUDA stack may require different compatibility work on each GPU.
