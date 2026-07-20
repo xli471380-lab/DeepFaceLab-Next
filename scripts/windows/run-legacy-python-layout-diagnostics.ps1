@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$targetScript = Join-Path $PSScriptRoot 'inspect-legacy-python-layout-v2.ps1'
+$targetScript = Join-Path $PSScriptRoot 'inspect-legacy-python-layout-v3.ps1'
 $profileResolved = (Resolve-Path -LiteralPath $ProfilePath).Path
 
 if (-not (Test-Path -LiteralPath $targetScript -PathType Leaf)) {
@@ -45,12 +45,13 @@ $lastStage = $null
 $lastMessage = $null
 try {
     Write-Host ''
-    Write-Host '[1/4] Starting staged read-only diagnostics...' -ForegroundColor Cyan
+    Write-Host '[1/4] Starting compact staged read-only diagnostics...' -ForegroundColor Cyan
     Write-Host ("Profile: {0}" -f $profileResolved)
     Write-Host ("Overall timeout: {0} seconds" -f $TimeoutSeconds)
     Write-Host ("Per Python probe timeout: {0} seconds" -f $PythonProbeTimeoutSeconds)
     Write-Host ''
     Write-Host '[2/4] Running isolated stages. TensorFlow is not imported.' -ForegroundColor Cyan
+    Write-Host 'Large inventories are written as text files; the main JSON remains compact.'
     Write-Host ''
 
     $argumentString = '-NoProfile -ExecutionPolicy Bypass -File "{0}" -ProfilePath "{1}" -ProgressPath "{2}" -PythonProbeTimeoutSeconds {3}' -f `
