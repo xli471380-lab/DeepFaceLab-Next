@@ -9,8 +9,8 @@ echo   DeepFaceLab-Next - Legacy runtime read-only probe
 echo ============================================================
 echo.
 echo This tool creates an ignored local profile and runs read-only
- echo version checks for embedded Python, pip packages, FFmpeg,
- echo NVIDIA status, and bundled CUDA DLL files.
+echo version checks for embedded Python, pip packages, FFmpeg,
+echo NVIDIA status, and bundled CUDA DLL files.
 echo.
 echo It will NOT run DeepFaceLab main.py or start training.
 echo.
