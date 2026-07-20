@@ -90,13 +90,38 @@ $newIsolationLine = @'
         scripted_answer_count = @($promptAnswers).Count
 '@
 
+$oldBoundedLine = @'
+        training_bounded_to_target_iteration = $true
+'@
+
+$newBoundedLine = @'
+        training_bounded_to_target_iteration = ($status -eq 'passed' -and [int]$iteration -eq $targetIteration)
+'@
+
+$oldSafetyOutput = @'
+Write-Host '[4/4] Safety boundary' -ForegroundColor Cyan
+Write-Host 'Only a two-iteration SAEHD checkpoint was created and saved. Resume, merge, and DFM export were not started.' -ForegroundColor Yellow
+'@
+
+$newSafetyOutput = @'
+Write-Host '[4/4] Safety boundary' -ForegroundColor Cyan
+if ($status -eq 'passed') {
+    Write-Host 'A validated two-iteration SAEHD checkpoint was created and saved. Resume, merge, and DFM export were not started.' -ForegroundColor Yellow
+}
+else {
+    Write-Host 'The generated temporary checkpoint was blocked and removed. No persistent model was committed; resume, merge, and DFM export were not started.' -ForegroundColor Yellow
+}
+'@
+
 $sourceText = [System.IO.File]::ReadAllText($sourceRunner)
 
 $replacementPairs = @(
     [ordered]@{ Name = 'source path block'; Old = $oldRootBlock; New = $newRootTemplate },
     [ordered]@{ Name = 'training argument block'; Old = $oldTrainingBlock; New = $newTrainingBlock },
     [ordered]@{ Name = 'training invocation'; Old = $oldInvokeLine; New = $newInvokeLine },
-    [ordered]@{ Name = 'isolation report block'; Old = $oldIsolationLine; New = $newIsolationLine }
+    [ordered]@{ Name = 'isolation report block'; Old = $oldIsolationLine; New = $newIsolationLine },
+    [ordered]@{ Name = 'bounded-training report field'; Old = $oldBoundedLine; New = $newBoundedLine },
+    [ordered]@{ Name = 'safety terminal output'; Old = $oldSafetyOutput; New = $newSafetyOutput }
 )
 
 foreach ($pair in $replacementPairs) {
@@ -113,6 +138,8 @@ $patchedText = $sourceText.Replace($oldRootBlock, $newRootBlock)
 $patchedText = $patchedText.Replace($oldTrainingBlock, $newTrainingBlock)
 $patchedText = $patchedText.Replace($oldInvokeLine, $newInvokeLine)
 $patchedText = $patchedText.Replace($oldIsolationLine, $newIsolationLine)
+$patchedText = $patchedText.Replace($oldBoundedLine, $newBoundedLine)
+$patchedText = $patchedText.Replace($oldSafetyOutput, $newSafetyOutput)
 
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('DeepFaceLab-Next-Step14-' + [Guid]::NewGuid().ToString('N'))
 $tempRunner = Join-Path $tempRoot 'run-p0-initial-training-save-gate-patched.ps1'
