@@ -14,7 +14,22 @@ if (-not (Test-Path -LiteralPath $sourceRunner -PathType Leaf)) {
     throw "Step 13 source runner was not found: $sourceRunner"
 }
 
-$oldBlock = @'
+$oldRootBlock = @'
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$profileResolved = (Resolve-Path -LiteralPath $ProfilePath).Path
+$profile = Import-PowerShellDataFile -LiteralPath $profileResolved
+$validatorScript = Join-Path $PSScriptRoot 'validate-p0-aligned-faces.py'
+'@
+
+$newRootTemplate = @'
+$step13SourceRoot = '__STEP13_SOURCE_ROOT__'
+$repoRoot = (Resolve-Path (Join-Path $step13SourceRoot '..\..')).Path
+$profileResolved = (Resolve-Path -LiteralPath $ProfilePath).Path
+$profile = Import-PowerShellDataFile -LiteralPath $profileResolved
+$validatorScript = Join-Path $step13SourceRoot 'validate-p0-aligned-faces.py'
+'@
+
+$oldSnapshotBlock = @'
         $relative = $item.FullName.Substring($Path.TrimEnd('\').Length).TrimStart('\')
         $kind = 'F'
         $length = [int64]$item.Length
@@ -25,7 +40,7 @@ $oldBlock = @'
         }
 '@
 
-$newBlock = @'
+$newSnapshotBlock = @'
         $relative = $item.FullName.Substring($Path.TrimEnd('\').Length).TrimStart('\')
 
         if ($item.PSIsContainer) {
@@ -39,18 +54,24 @@ $newBlock = @'
 '@
 
 $sourceText = [System.IO.File]::ReadAllText($sourceRunner)
-$firstIndex = $sourceText.IndexOf($oldBlock, [System.StringComparison]::Ordinal)
-$lastIndex = $sourceText.LastIndexOf($oldBlock, [System.StringComparison]::Ordinal)
+$rootFirstIndex = $sourceText.IndexOf($oldRootBlock, [System.StringComparison]::Ordinal)
+$rootLastIndex = $sourceText.LastIndexOf($oldRootBlock, [System.StringComparison]::Ordinal)
+$snapshotFirstIndex = $sourceText.IndexOf($oldSnapshotBlock, [System.StringComparison]::Ordinal)
+$snapshotLastIndex = $sourceText.LastIndexOf($oldSnapshotBlock, [System.StringComparison]::Ordinal)
 
-if ($firstIndex -lt 0) {
-    throw 'The expected PowerShell 5.1 snapshot block was not found. Nothing was executed.'
+if (($rootFirstIndex -lt 0) -or ($rootFirstIndex -ne $rootLastIndex)) {
+    throw 'The expected step 13 source-path block was not found exactly once. Nothing was executed.'
 }
 
-if ($firstIndex -ne $lastIndex) {
-    throw 'The expected snapshot block occurred more than once. Nothing was executed.'
+if (($snapshotFirstIndex -lt 0) -or ($snapshotFirstIndex -ne $snapshotLastIndex)) {
+    throw 'The expected PowerShell 5.1 snapshot block was not found exactly once. Nothing was executed.'
 }
 
-$patchedText = $sourceText.Substring(0, $firstIndex) + $newBlock + $sourceText.Substring($firstIndex + $oldBlock.Length)
+$escapedSourceRoot = $PSScriptRoot.Replace("'", "''")
+$newRootBlock = $newRootTemplate.Replace('__STEP13_SOURCE_ROOT__', $escapedSourceRoot)
+$patchedText = $sourceText.Replace($oldRootBlock, $newRootBlock)
+$patchedText = $patchedText.Replace($oldSnapshotBlock, $newSnapshotBlock)
+
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('DeepFaceLab-Next-Step13-' + [Guid]::NewGuid().ToString('N'))
 $tempRunner = Join-Path $tempRoot 'run-p0-controlled-face-extraction-patched.ps1'
 $childExitCode = 1
