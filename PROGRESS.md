@@ -29,9 +29,11 @@ Last updated: 2026-07-20
 - [x] Correct the multi-machine design: no permanent work split between computers.
 - [x] Add safe computer-switch BAT files.
 - [x] Add local historical-runtime discovery tooling.
-- [x] Scan all fixed drives on `hp-a2000` at commit `5d6cc6412f10f9570dec1c4b11356d8112bbf1f8`.
-- [x] Confirm that no reusable historical DeepFaceLab portable bundle is currently installed.
+- [x] Scan all fixed drives on `hp-a2000` and confirm no reusable historical portable bundle is installed.
 - [x] Fix CMD UTF-8 parsing in the discovery BAT by using ASCII-only output.
+- [x] Obtain the official-linked RTX 3000 Windows package without executing it.
+- [x] Record the package filename, byte size, SHA-256, and unsigned Authenticode status.
+- [x] Add a one-click static package inspection BAT and PowerShell inspection script.
 
 ## Verified local results
 
@@ -54,15 +56,7 @@ This validates the local system profile and scripts only. It is not the historic
 
 ### Historical runtime discovery
 
-Search roots:
-
-```text
-C:\
-D:\
-E:\
-F:\
-G:\
-```
+Search roots: `C:\`, `D:\`, `E:\`, `F:\`, and `G:\`.
 
 Result:
 
@@ -71,7 +65,23 @@ Result:
 - The only candidate was `D:\DeepFaceLab-Next`, identified as a source checkout.
 - No embedded Python, FFmpeg, `_internal` runtime, or portable workspace was found.
 
-Conclusion: P0 needs a separately obtained or provisioned historical Windows runtime. The source checkout must not be treated as a runnable baseline by itself.
+Conclusion: P0 requires a separately obtained historical Windows runtime.
+
+### Downloaded historical package
+
+Local file:
+
+```text
+F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_series_build_11_20_2021.exe
+```
+
+Recorded metadata:
+
+- Size: `3919330734` bytes.
+- SHA-256: `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
+- Authenticode status: `NotSigned`.
+- The file was obtained from an upstream README-linked Windows mirror.
+- The upstream README and GitHub release pages do not provide a published checksum or signature for this exact EXE, so the local hash is a fingerprint, not proof of authorship.
 
 ## Two-computer development model
 
@@ -79,9 +89,10 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 
 ## In progress
 
-- [ ] Obtain the official last Windows portable release without executing it.
-- [ ] Record download source, filename, size, and SHA-256.
-- [ ] Perform static package and directory-structure inspection before execution.
+- [ ] Run the new static package inspection step.
+- [ ] Review Microsoft Defender output.
+- [ ] Use 7-Zip to list and integrity-test the self-extracting archive without running it.
+- [ ] Confirm the archive contains a plausible DeepFaceLab portable structure.
 - [ ] Extract into a separate local runtime directory outside the source repository.
 - [ ] Create a `legacy-dfl-baseline` local profile for the extracted runtime.
 - [ ] Verify embedded Python, TensorFlow, CUDA/cuDNN, FFmpeg, and GPU detection.
@@ -91,12 +102,12 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 
 ## Next local acceptance work
 
-1. Pull the latest branch to receive the CMD encoding fix.
-2. Create `D:\DeepFaceLab-Historical-Downloads` outside the source repository.
-3. Obtain the last official-linked Windows release from the archived upstream README.
-4. Do not run any BAT or EXE from the downloaded package yet.
-5. Record the archive filename and size, then run a static hash and package inspection step.
-6. Extract the accepted archive to a separate directory such as `D:\DeepFaceLab-Legacy-Runtime`.
+1. Pull the latest branch to receive `4_检查下载包.bat`.
+2. Run the static inspection BAT against the downloaded EXE.
+3. Do not run the downloaded EXE yet.
+4. Review the generated JSON, Defender log, and 7-Zip archive-test output.
+5. If 7-Zip is missing, install it from its official source or provide its existing path, then repeat the inspection.
+6. Extract the accepted archive to a short separate directory such as `F:\DFL-Legacy` to avoid historical path-length problems.
 7. Create an ignored `legacy-dfl-baseline` profile pointing to the embedded tools.
 8. Validate the historical environment before using authorized test media.
 
@@ -105,6 +116,7 @@ Both computers may perform the same work. Only local Python/CUDA/FFmpeg paths, p
 - The inherited CUDA requirements pin old packages including NumPy 1.19.3, h5py 2.10.0, OpenCV 4.1.0.25, SciPy 1.4.1, TensorFlow GPU 2.4.0, and tf2onnx 1.9.3.
 - Modern Python/CUDA upgrades may break binary compatibility, checkpoint behavior, numerical output, or DFM export.
 - Historical Windows bundles are externally hosted and must be treated as untrusted until inspected.
+- The downloaded EXE is unsigned and has no official published checksum located so far.
 - Hardware limits may require different test settings, but must not create divergent source behavior.
 - The historical TensorFlow/CUDA stack may require different compatibility work on each GPU.
 - P0 cannot be accepted from import tests alone; a real save/resume and export workflow is required.
