@@ -14,6 +14,9 @@ echo.
 echo It will NOT import TensorFlow or execute DeepFaceLab main.py,
 echo bundled BAT files, extraction, merge, or training commands.
 echo.
+echo The diagnostics wrapper prints progress every 10 seconds and
+echo stops the isolated read-only process after 5 minutes.
+echo.
 
 set "PROFILE=config\local\hp-a2000-legacy-dfl-rtx3000-20211120.psd1"
 if not "%~1"=="" set "PROFILE=%~1"
@@ -40,7 +43,7 @@ if /i not "%CONFIRM%"=="DIAGNOSE" (
     exit /b 2
 )
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\inspect-legacy-python-layout.ps1" -ProfilePath "%PROFILE%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\run-legacy-python-layout-diagnostics.ps1" -ProfilePath "%PROFILE%" -TimeoutSeconds 300
 
 if errorlevel 1 (
     echo.
