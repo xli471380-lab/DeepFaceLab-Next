@@ -14,6 +14,36 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
 
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 
+function Invoke-NativeCapture {
+    param(
+        [Parameter(Mandatory = $true)][string]$Executable,
+        [string[]]$Arguments = @()
+    )
+
+    $previousPreference = $ErrorActionPreference
+    try {
+        # Windows PowerShell 5.1 can turn native stderr into ErrorRecord objects.
+        # Continue locally so the complete stdout/stderr stream and exit code are retained.
+        $ErrorActionPreference = 'Continue'
+        $lines = @(& $Executable @Arguments 2>&1 | ForEach-Object { $_.ToString() })
+        $exitCode = $LASTEXITCODE
+
+        return [ordered]@{
+            exit_code = $exitCode
+            output = ($lines -join [Environment]::NewLine).Trim()
+        }
+    }
+    catch {
+        return [ordered]@{
+            exit_code = -1
+            output = $_.Exception.ToString()
+        }
+    }
+    finally {
+        $ErrorActionPreference = $previousPreference
+    }
+}
+
 function Get-CommandResult {
     param(
         [Parameter(Mandatory = $true)][string]$Command,
@@ -31,24 +61,13 @@ function Get-CommandResult {
         }
     }
 
-    try {
-        $output = & $resolved.Source @Arguments 2>&1 | Out-String
-        return [ordered]@{
-            available = $true
-            command   = $Command
-            path      = $resolved.Source
-            exit_code = $LASTEXITCODE
-            output    = $output.Trim()
-        }
-    }
-    catch {
-        return [ordered]@{
-            available = $true
-            command   = $Command
-            path      = $resolved.Source
-            exit_code = -1
-            output    = $_.Exception.Message
-        }
+    $captured = Invoke-NativeCapture -Executable $resolved.Source -Arguments $Arguments
+    return [ordered]@{
+        available = $true
+        command   = $Command
+        path      = $resolved.Source
+        exit_code = $captured.exit_code
+        output    = $captured.output
     }
 }
 
@@ -68,24 +87,14 @@ function Get-ExplicitExecutableResult {
         }
     }
 
-    try {
-        $output = & $Executable @Arguments 2>&1 | Out-String
-        return [ordered]@{
-            available = $true
-            command   = $Executable
-            path      = (Resolve-Path -LiteralPath $Executable).Path
-            exit_code = $LASTEXITCODE
-            output    = $output.Trim()
-        }
-    }
-    catch {
-        return [ordered]@{
-            available = $true
-            command   = $Executable
-            path      = $Executable
-            exit_code = -1
-            output    = $_.Exception.Message
-        }
+    $resolvedPath = (Resolve-Path -LiteralPath $Executable).Path
+    $captured = Invoke-NativeCapture -Executable $resolvedPath -Arguments $Arguments
+    return [ordered]@{
+        available = $true
+        command   = $Executable
+        path      = $resolvedPath
+        exit_code = $captured.exit_code
+        output    = $captured.output
     }
 }
 
@@ -93,7 +102,11 @@ function Get-GitText {
     param([string[]]$Arguments)
 
     try {
-        return (& git -C $repoRoot @Arguments 2>&1 | Out-String).Trim()
+        $captured = Invoke-NativeCapture -Executable 'git' -Arguments (@('-C', $repoRoot) + $Arguments)
+        if ($captured.exit_code -ne 0) {
+            return $null
+        }
+        return $captured.output
     }
     catch {
         return $null
@@ -118,42 +131,50 @@ $nvidiaSmi = Get-CommandResult -Command 'nvidia-smi' -Arguments @(
     '--query-gpu=index,name,driver_version,memory.total,memory.used,memory.free,compute_cap',
     '--format=csv,noheader,nounits'
 )
-if (-not $nvidiaSmi.available) {
-    $warnings.Add('nvidia-smi was not found. NVIDIA runtime details could not be verified.')
+if (-not $nvidiaSmi.available -or $nvidiaSmi.exit_code -ne 0) {
+    $warnings.Add('nvidia-smi could not be verified. NVIDIA runtime details may be incomplete.')
 }
 
 $gitVersion = Get-CommandResult -Command 'git' -Arguments @('--version')
-if (-not $gitVersion.available) {
-    $warnings.Add('Git was not found on PATH.')
+if (-not $gitVersion.available -or $gitVersion.exit_code -ne 0) {
+    $warnings.Add('Git could not be verified.')
 }
 
 $ffmpegVersion = Get-CommandResult -Command 'ffmpeg' -Arguments @('-version')
 if (-not $ffmpegVersion.available) {
     $warnings.Add('FFmpeg was not found on PATH.')
 }
+elseif ($ffmpegVersion.exit_code -ne 0) {
+    $warnings.Add('FFmpeg was found but did not run successfully.')
+}
 
 $nvccVersion = Get-CommandResult -Command 'nvcc' -Arguments @('--version')
 if (-not $nvccVersion.available) {
     $warnings.Add('nvcc was not found on PATH. This may be expected for a bundled runtime.')
 }
+elseif ($nvccVersion.exit_code -ne 0) {
+    $warnings.Add('nvcc was found but did not run successfully.')
+}
+
+$pythonArguments = @(
+    '-c',
+    'import platform,sys; print(sys.executable); print(sys.version.replace(chr(10), " ")); print(platform.platform())'
+)
 
 $pythonResult = $null
 if (-not [string]::IsNullOrWhiteSpace($PythonExe)) {
-    $pythonResult = Get-ExplicitExecutableResult -Executable $PythonExe -Arguments @(
-        '-c',
-        'import json,platform,sys; print(json.dumps({"executable":sys.executable,"version":sys.version,"platform":platform.platform()}))'
-    )
+    $pythonResult = Get-ExplicitExecutableResult -Executable $PythonExe -Arguments $pythonArguments
     if (-not $pythonResult.available -or $pythonResult.exit_code -ne 0) {
-        $warnings.Add('The explicitly supplied Python executable could not be verified.')
+        $warnings.Add('The explicitly supplied Python executable could not be verified. See the captured output for details.')
     }
 }
 else {
-    $pythonResult = Get-CommandResult -Command 'python' -Arguments @(
-        '-c',
-        'import json,platform,sys; print(json.dumps({"executable":sys.executable,"version":sys.version,"platform":platform.platform()}))'
-    )
+    $pythonResult = Get-CommandResult -Command 'python' -Arguments $pythonArguments
     if (-not $pythonResult.available) {
         $warnings.Add('Python was not found on PATH. Supply -PythonExe when using a bundled interpreter.')
+    }
+    elseif ($pythonResult.exit_code -ne 0) {
+        $warnings.Add('Python was found but the runtime probe failed. See the captured output for details.')
     }
 }
 
@@ -179,7 +200,7 @@ $fileTimestamp = $timestamp.ToString('yyyyMMddTHHmmssZ')
 $outputPath = Join-Path $OutputDirectory ("system-diagnostics-{0}.json" -f $fileTimestamp)
 
 $report = [ordered]@{
-    schema_version = 1
+    schema_version = 2
     generated_at_utc = $timestamp.ToString('o')
     status = 'diagnostic_complete'
     repository = [ordered]@{
