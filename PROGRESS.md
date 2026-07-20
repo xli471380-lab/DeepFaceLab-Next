@@ -28,6 +28,10 @@ Last updated: 2026-07-20
 - [x] Scan fixed drives `C:\`, `D:\`, and `E:\` on the RTX 5880 Ada computer; find 2 candidates but 0 reusable historical portable bundles.
 - [x] Fix discovery input so blank input or `ALL` selects all fixed drives, while explicit roots are parsed without CMD/PowerShell pipe escaping errors.
 - [x] Parameterize steps 6–9 so package paths, extraction destinations, machine IDs, environment IDs, and local profile paths can differ between computers.
+- [x] Re-download the historical RTX 3000 package on the RTX 5880 Ada computer and confirm exact size `3919330734` bytes and SHA-256 `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
+- [x] Safely extract the verified package on the RTX 5880 Ada computer without executing the SFX: integrity exit `0`, extraction exit `0`, 29098 archive entries, 23376 files, and 5722 directories.
+- [x] Create the ignored `rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1` profile and pass the read-only runtime probe.
+- [x] Confirm the RTX 5880 Ada historical profile uses embedded Python 3.6.8, bundled FFmpeg successfully, and 8 bundled CUDA/cuDNN DLL records; `main.py` was not executed.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure.
 
 ## Verified local results
@@ -63,6 +67,41 @@ Status: **system diagnostics complete with zero warnings**.
 
 This system profile validates hardware and tooling only. Python 3.11, modern FFmpeg, CUDA 13.x, and system cuDNN are not the historical DeepFaceLab runtime.
 
+### `rtx5880-ada × legacy-dfl-rtx3000-20211120`
+
+Status: **historical runtime extracted and read-only probe passed**.
+
+Package:
+
+```text
+D:\DFL-Historical-Downloads\DeepFaceLab\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_series_build_11_20_2021.exe
+```
+
+Runtime root:
+
+```text
+D:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series
+```
+
+Observed:
+
+- Package size: `3919330734` bytes.
+- SHA-256 matched the historical baseline exactly.
+- Archive integrity test exit code: `0`.
+- Extraction exit code: `0`.
+- Archive entries checked: `29098`.
+- Extracted files: `23376`; directories: `5722`.
+- Embedded Python candidates: `1`; FFmpeg candidates: `1`.
+- Local ignored profile created: `config\local\rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1`.
+- Read-only probe status: `passed`.
+- Embedded Python: `3.6.8`.
+- Bundled FFmpeg exit code: `0`.
+- Selected package metadata records: `0`; this is consistent with the portable bundle's incomplete package metadata and is not yet treated as a missing-dependency verdict.
+- Bundled CUDA/cuDNN DLL records: `8`.
+- DeepFaceLab `main.py` was not executed and training was not started.
+
+The active-antivirus scan result for the extracted directory has not yet been recorded in the project progress and must not be assumed.
+
 ## Historical package baseline verified on `hp-a2000`
 
 Original package:
@@ -81,36 +120,11 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 - Microsoft Safety Scanner custom scan: `No infection found`, return code `0`.
 - The hash is a stable local fingerprint, not proof of publisher identity.
 
-Extracted runtime on `hp-a2000`:
-
-```text
-F:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series
-```
-
-- Extracted files: `23376`.
-- Extracted directories: `5722`.
-- Extracted size: `8146405202` bytes.
-- Huorong extracted-runtime scan: `74941` objects, `0` risks.
-- Embedded Python: 3.6.8, 64-bit.
-- Bundled FFmpeg: 4.2.1.
-- Bundled CUDA/cuDNN DLL records: 8.
-- RTX A2000 was visible to `nvidia-smi`; TensorFlow/GPU import is not yet accepted.
-
-## Cross-computer transfer decision
-
-The RTX 5880 Ada computer has no reusable historical bundle. The preferred transfer artifact is the already fingerprinted original 3.9 GB package rather than the 8.1 GB extracted directory because it is smaller and can be independently re-hashed, scanned, integrity-tested, and safely extracted on the second computer.
-
-Do not copy the `hp-a2000` local profile. The RTX 5880 Ada computer must create its own local historical-runtime profile after extraction.
-
 ## In progress
 
-- [ ] Transfer the verified historical package to the RTX 5880 Ada computer through a trusted local medium or private network path.
-- [ ] Recalculate SHA-256 on the destination and require an exact match before extraction.
-- [ ] Scan the transferred package with the active antivirus on the RTX 5880 Ada computer.
-- [ ] Install or verify 7-Zip locally, then use parameterized step 6 to extract outside the repository.
-- [ ] Scan the extracted directory before executing any included file.
-- [ ] Use parameterized step 7 to create `rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1` and run the read-only probe.
-- [ ] Run parameterized steps 8 and 9 against the RTX 5880 Ada historical profile.
+- [ ] Record the active-antivirus scan result for `D:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` on the RTX 5880 Ada computer.
+- [ ] Run parameterized step 8 against `rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1`.
+- [ ] Run parameterized step 9 against the same historical profile.
 - [ ] Complete step 9 on `hp-a2000` when that computer is used again.
 - [ ] Build a controlled TensorFlow/CUDA/GPU visibility probe from the confirmed bundle path setup.
 - [ ] Prepare a small authorized, non-public test dataset.
@@ -118,13 +132,11 @@ Do not copy the `hp-a2000` local profile. The RTX 5880 Ada computer must create 
 
 ## Next local work on RTX 5880 Ada
 
-1. Pull the latest branch containing parameterized cross-computer BAT files.
-2. Confirm at least 15 GB free on the chosen destination drive.
-3. Copy only the verified original package from the first computer.
-4. Verify the destination SHA-256 exactly matches the recorded fingerprint.
-5. Scan the copied package folder with the active antivirus.
-6. Run parameterized step 6 with explicit local package and destination paths.
-7. Do not run extracted BAT, EXE, Python, or `main.py` until the extracted directory has also been scanned.
+1. Confirm and record the active-antivirus scan result for the extracted directory.
+2. Run parameterized step 8 using the RTX 5880 Ada historical profile.
+3. Review the static BAT/environment inspection report.
+4. Run parameterized step 9 only after step 8 passes.
+5. Do not run TensorFlow imports, bundled launcher BAT files, DeepFaceLab `main.py`, or training yet.
 
 ## Known risks
 
