@@ -14,15 +14,18 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
 }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 
-$checks = New-Object System.Collections.Generic.List[object]
-$failures = New-Object System.Collections.Generic.List[object]
-$warnings = New-Object System.Collections.Generic.List[string]
+# ArrayList avoids a Windows PowerShell 5.1 binder bug that can raise
+# "Argument types do not match" when generic List objects are embedded in
+# arrays or passed to ConvertTo-Json.
+$checks = New-Object System.Collections.ArrayList
+$failures = New-Object System.Collections.ArrayList
+$warnings = New-Object System.Collections.ArrayList
 
 function Add-Check {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][bool]$Passed,
-        [Parameter(Mandatory = $true)][string]$Details,
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Details,
         [bool]$Required = $true
     )
 
@@ -32,13 +35,13 @@ function Add-Check {
         required = $Required
         details = $Details
     }
-    $checks.Add($record)
+    [void]$checks.Add($record)
 
     if ($Required -and -not $Passed) {
-        $failures.Add($record)
+        [void]$failures.Add($record)
     }
     elseif (-not $Required -and -not $Passed) {
-        $warnings.Add(("{0}: {1}" -f $Name, $Details))
+        [void]$warnings.Add(("{0}: {1}" -f $Name, $Details))
     }
 }
 
@@ -52,8 +55,9 @@ function Invoke-NativeText {
     try {
         $ErrorActionPreference = 'Continue'
         $lines = @(& $Executable @Arguments 2>&1 | ForEach-Object { $_.ToString() })
+        $exitCode = $LASTEXITCODE
         return [PSCustomObject]@{
-            exit_code = $LASTEXITCODE
+            exit_code = $exitCode
             output = ($lines -join [Environment]::NewLine).Trim()
         }
     }
@@ -124,7 +128,6 @@ $trackedSensitive = @()
 if ($null -ne $gitCommand) {
     $trackedFiles = Invoke-Git -Arguments @('ls-files')
     if (-not [string]::IsNullOrWhiteSpace($trackedFiles)) {
-        # Force an array even when the filter returns zero or one item.
         $trackedSensitive = @(
             $trackedFiles -split "`r?`n" | Where-Object {
                 $_ -match '^(workspace|artifacts)/' -or $_ -match '\.dfm$'
@@ -168,9 +171,11 @@ else {
 }
 
 if (-not [string]::IsNullOrWhiteSpace($resolvedPython)) {
+    # Avoid embedded quotes because Windows PowerShell 5.1 can modify native
+    # command arguments before Python receives them.
     $pythonProbe = Invoke-NativeText -Executable $resolvedPython -Arguments @(
         '-c',
-        'import sys; print(sys.executable); print(sys.version.replace(chr(10), " "))'
+        'import sys; print(sys.executable); print(sys.version.replace(chr(10),chr(32)).replace(chr(13),chr(32)))'
     )
     $pythonCheckPassed = ($pythonProbe.exit_code -eq 0)
     $pythonDetails = $pythonProbe.output
@@ -185,36 +190,41 @@ if (-not [string]::IsNullOrWhiteSpace($PythonExe)) {
     $diagnosticParameters['PythonExe'] = $PythonExe
 }
 
-$diagnosticObjects = @(& $diagnosticScript @diagnosticParameters)
-$diagnosticResult = @($diagnosticObjects | Where-Object {
-    $_ -is [PSObject] -and $_.PSObject.Properties.Name -contains 'report_path'
-} | Select-Object -Last 1)
+$diagnosticOutput = @(& $diagnosticScript @diagnosticParameters)
+$diagnosticResult = $diagnosticOutput | Where-Object {
+    $null -ne $_ -and $_.PSObject.Properties.Name -contains 'report_path'
+} | Select-Object -Last 1
 
 $diagnosticReportPath = $null
-if ($diagnosticResult.Count -gt 0) {
-    $diagnosticReportPath = $diagnosticResult[0].report_path
+if ($null -ne $diagnosticResult) {
+    $diagnosticReportPath = [string]$diagnosticResult.report_path
 }
-Add-Check -Name 'diagnostics_report_written' -Passed (
-    -not [string]::IsNullOrWhiteSpace($diagnosticReportPath) -and
-    (Test-Path -LiteralPath $diagnosticReportPath -PathType Leaf)
-) -Details $(
-    if ([string]::IsNullOrWhiteSpace($diagnosticReportPath)) {
-        'The diagnostics script did not return a report path.'
-    }
-    else {
-        $diagnosticReportPath
-    }
+$diagnosticPathPresent = -not [string]::IsNullOrWhiteSpace($diagnosticReportPath)
+$diagnosticFilePresent = $false
+if ($diagnosticPathPresent) {
+    $diagnosticFilePresent = Test-Path -LiteralPath $diagnosticReportPath -PathType Leaf
+}
+Add-Check -Name 'diagnostics_report_written' -Passed ($diagnosticPathPresent -and $diagnosticFilePresent) -Details $(
+    if (-not $diagnosticPathPresent) { 'The diagnostics script did not return a report path.' }
+    else { $diagnosticReportPath }
 )
+
+# Materialize normal PowerShell arrays before JSON serialization. This avoids
+# the generic collection binder failure in Windows PowerShell 5.1.
+$checkRecords = @($checks | ForEach-Object { $_ })
+$failureRecords = @($failures | ForEach-Object { $_ })
+$warningRecords = @($warnings | ForEach-Object { [string]$_ })
 
 $timestamp = (Get-Date).ToUniversalTime()
 $fileTimestamp = $timestamp.ToString('yyyyMMddTHHmmssZ')
 $summaryPath = Join-Path $OutputDirectory ("acceptance-summary-{0}.json" -f $fileTimestamp)
+$status = if ($failureRecords.Count -eq 0) { 'passed' } else { 'blocked' }
 
 $summary = [ordered]@{
-    schema_version = 2
+    schema_version = 3
     generated_at_utc = $timestamp.ToString('o')
     phase = 'p0_environment_scaffold'
-    status = $(if ($failures.Count -eq 0) { 'passed' } else { 'blocked' })
+    status = $status
     repository = [ordered]@{
         root = $repoRoot
         origin = $origin
@@ -222,9 +232,9 @@ $summary = [ordered]@{
         commit = $commit
     }
     diagnostics_report = $diagnosticReportPath
-    checks = @($checks)
-    failures = @($failures)
-    warnings = @($warnings)
+    checks = $checkRecords
+    failures = $failureRecords
+    warnings = $warningRecords
     next_required_gates = @(
         'authorized_face_extraction',
         'short_training_run',
@@ -239,7 +249,7 @@ $summary = [ordered]@{
 $summary | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
 
 Write-Host ''
-if ($failures.Count -eq 0) {
+if ($failureRecords.Count -eq 0) {
     Write-Host 'P0 environment scaffold passed.' -ForegroundColor Green
 }
 else {
@@ -248,10 +258,10 @@ else {
 Write-Host ("Summary: {0}" -f $summaryPath)
 Write-Host ("Diagnostics: {0}" -f $diagnosticReportPath)
 
-if ($failures.Count -gt 0) {
+if ($failureRecords.Count -gt 0) {
     Write-Host ''
     Write-Host 'Required failures:' -ForegroundColor Red
-    foreach ($failure in $failures) {
+    foreach ($failure in $failureRecords) {
         Write-Host ("- {0}: {1}" -f $failure.name, $failure.details) -ForegroundColor Red
     }
     exit 1
