@@ -163,20 +163,11 @@ def main():
                 "traceback": traceback.format_exc(),
             })
 
-        try:
-            result["gpu_device_name"] = safe_text(tf.test.gpu_device_name())
-        except Exception as exc:
-            result["errors"].append({
-                "stage": "gpu_device_name",
-                "error": safe_text(exc),
-                "traceback": traceback.format_exc(),
-            })
-
         local_gpu_count = len([
             item for item in result["local_devices"]
             if safe_text(item.get("device_type", "")).upper() == "GPU"
         ])
-        gpu_visible = bool(result["physical_gpus"] or local_gpu_count or result["gpu_device_name"])
+        gpu_visible = bool(result["physical_gpus"] or local_gpu_count)
         result["gpu_visible"] = gpu_visible
         result["physical_gpu_count"] = len(result["physical_gpus"])
         result["local_gpu_count"] = local_gpu_count
