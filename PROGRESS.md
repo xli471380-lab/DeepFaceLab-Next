@@ -32,6 +32,7 @@ Last updated: 2026-07-20
 - [x] Safely extract the verified package on the RTX 5880 Ada computer without executing the SFX: integrity exit `0`, extraction exit `0`, 29098 archive entries, 23376 files, and 5722 directories.
 - [x] Create the ignored `rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1` profile and pass the read-only runtime probe.
 - [x] Confirm the RTX 5880 Ada historical profile uses embedded Python 3.6.8, bundled FFmpeg successfully, and 8 bundled CUDA/cuDNN DLL records; `main.py` was not executed.
+- [x] Pass static BAT/environment inspection on RTX 5880 Ada: status `passed`, 1 package metadata record, 0 selected package records, 60 BAT files, 56 top-level BAT files, 0 enumeration errors, 0 read/hash errors, and 128 relevant environment lines.
 - [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub `Empty reply from server` failure.
 
 ## Verified local results
@@ -69,7 +70,7 @@ This system profile validates hardware and tooling only. Python 3.11, modern FFm
 
 ### `rtx5880-ada × legacy-dfl-rtx3000-20211120`
 
-Status: **historical runtime extracted and read-only probe passed**.
+Status: **historical runtime extracted; read-only probe and static BAT/environment inspection passed**.
 
 Package:
 
@@ -96,9 +97,14 @@ Observed:
 - Read-only probe status: `passed`.
 - Embedded Python: `3.6.8`.
 - Bundled FFmpeg exit code: `0`.
-- Selected package metadata records: `0`; this is consistent with the portable bundle's incomplete package metadata and is not yet treated as a missing-dependency verdict.
 - Bundled CUDA/cuDNN DLL records: `8`.
-- DeepFaceLab `main.py` was not executed and training was not started.
+- Static environment inspection status: `passed`.
+- Package inventory method: `python_pkg_resources_working_set`; exit code `0`; total records `1`; selected records `0`.
+- BAT files read: `60`; top-level BAT files: `56`.
+- BAT enumeration errors: `0`; BAT read/hash errors: `0`.
+- Relevant BAT environment lines: `128`.
+- The selected-package count remains non-authoritative for this portable bundle; step 9 will inspect filesystem layout, `sys.path`, and static version files.
+- DeepFaceLab `main.py`, bundled launcher BAT files, TensorFlow imports, and training were not executed.
 
 The active-antivirus scan result for the extracted directory has not yet been recorded in the project progress and must not be assumed.
 
@@ -123,8 +129,8 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 ## In progress
 
 - [ ] Record the active-antivirus scan result for `D:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120` on the RTX 5880 Ada computer.
-- [ ] Run parameterized step 8 against `rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1`.
-- [ ] Run parameterized step 9 against the same historical profile.
+- [ ] Run parameterized step 9 against `rtx5880-ada-legacy-dfl-rtx3000-20211120.psd1`.
+- [ ] Review embedded Python `sys.path`, `._pth`, `site-packages`, selected package artifacts, static versions, and launcher environment lines.
 - [ ] Complete step 9 on `hp-a2000` when that computer is used again.
 - [ ] Build a controlled TensorFlow/CUDA/GPU visibility probe from the confirmed bundle path setup.
 - [ ] Prepare a small authorized, non-public test dataset.
@@ -133,10 +139,10 @@ F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_seri
 ## Next local work on RTX 5880 Ada
 
 1. Confirm and record the active-antivirus scan result for the extracted directory.
-2. Run parameterized step 8 using the RTX 5880 Ada historical profile.
-3. Review the static BAT/environment inspection report.
-4. Run parameterized step 9 only after step 8 passes.
-5. Do not run TensorFlow imports, bundled launcher BAT files, DeepFaceLab `main.py`, or training yet.
+2. Pull the progress update.
+3. Run parameterized step 9 using the RTX 5880 Ada historical profile.
+4. Review the Python layout report before importing TensorFlow.
+5. Do not run bundled launcher BAT files, DeepFaceLab `main.py`, TensorFlow imports, or training yet.
 
 ## Known risks
 
