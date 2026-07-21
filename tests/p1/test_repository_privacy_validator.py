@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -16,6 +17,7 @@ SPEC = importlib.util.spec_from_file_location("repository_privacy_validator", MO
 if SPEC is None or SPEC.loader is None:  # pragma: no cover
     raise RuntimeError(f"Unable to load validator module: {MODULE_PATH}")
 validator = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = validator
 SPEC.loader.exec_module(validator)
 
 
