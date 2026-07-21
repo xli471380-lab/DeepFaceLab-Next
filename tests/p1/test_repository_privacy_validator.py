@@ -47,6 +47,17 @@ class RepositoryPrivacyValidatorTests(unittest.TestCase):
         self.assertEqual(1, len(findings))
         self.assertEqual("P1_PRIVACY_PROHIBITED_ROOT", findings[0].code)
 
+    def test_local_profile_is_never_grandfathered(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            findings = validator.scan_tracked_paths(
+                Path(temporary),
+                ["config/local/machine.psd1"],
+                baseline_blob_by_path={"config/local/machine.psd1": "abc"},
+                current_blob_by_path={"config/local/machine.psd1": "abc"},
+            )
+        self.assertEqual(1, len(findings))
+        self.assertEqual("P1_PRIVACY_PROHIBITED_ROOT", findings[0].code)
+
     def test_dfm_file_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             findings = validator.scan_tracked_paths(
@@ -80,6 +91,42 @@ class RepositoryPrivacyValidatorTests(unittest.TestCase):
         self.assertEqual(1, len(findings))
         self.assertEqual("P1_PRIVACY_OVERSIZED_NON_TEXT", findings[0].code)
 
+    def test_unchanged_frozen_binary_is_grandfathered(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            binary = root / "facelib" / "S3FD.npy"
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b"1234567890")
+            grandfathered = []
+            findings = validator.scan_tracked_paths(
+                root,
+                ["facelib/S3FD.npy"],
+                max_nontext_bytes=4,
+                baseline_blob_by_path={"facelib/S3FD.npy": "frozen-sha"},
+                current_blob_by_path={"facelib/S3FD.npy": "frozen-sha"},
+                grandfathered_output=grandfathered,
+            )
+        self.assertEqual([], findings)
+        self.assertEqual(1, len(grandfathered))
+        self.assertEqual("facelib/S3FD.npy", grandfathered[0].path)
+        self.assertEqual("frozen-sha", grandfathered[0].blob_sha)
+
+    def test_changed_frozen_binary_is_blocked_once(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            binary = root / "facelib" / "S3FD.npy"
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b"1234567890")
+            findings = validator.scan_tracked_paths(
+                root,
+                ["facelib/S3FD.npy"],
+                max_nontext_bytes=4,
+                baseline_blob_by_path={"facelib/S3FD.npy": "old-sha"},
+                current_blob_by_path={"facelib/S3FD.npy": "new-sha"},
+            )
+        self.assertEqual(1, len(findings))
+        self.assertEqual("P1_PRIVACY_FROZEN_ARTIFACT_CHANGED", findings[0].code)
+
     def test_report_has_stable_safety_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -93,6 +140,7 @@ class RepositoryPrivacyValidatorTests(unittest.TestCase):
         self.assertFalse(report["safety"]["media_contents_read"])
         self.assertFalse(report["safety"]["checkpoint_contents_read"])
         self.assertFalse(report["safety"]["dfm_contents_read"])
+        self.assertFalse(report["safety"]["git_blob_contents_read"])
         json.dumps(report)
 
     def test_atomic_json_writer_removes_partial_file(self) -> None:
