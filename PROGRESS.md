@@ -1,170 +1,162 @@
 # DeepFaceLab-Next Progress
 
-Last updated: 2026-07-20
+Last updated: 2026-07-21
 
 ## Project state
 
 - Repository: `xli471380-lab/DeepFaceLab-Next`.
 - Frozen upstream baseline on `master`: `e4b7543ffa1d73b26fce1e31852727f658ba490c`.
 - Integration branch: `develop`.
-- Active branch: `agent/p0-reproducible-baseline`.
-- Draft pull request: `#1 P0: establish reproducible baseline framework`.
-- Current milestone: **P0 — Reproducible historical baseline**.
-- Both computers are independent development nodes with local profiles, runtimes, workspaces, media, checkpoints, DFM files, and generated artifacts kept outside Git.
+- Current branch: `agent/p0-reproducible-baseline`.
+- Pull request: `#1 P0: establish reproducible baseline framework`.
+- P0 status: **accepted and complete on one documented local profile**.
+- Current transition: review/merge PR #1, then begin **P1 — Engineering reliability**.
+- Local profiles, historical runtimes, workspaces, media, checkpoints, DFM files, and generated artifacts remain outside Git.
+
+## P0 acceptance decision
+
+P0 is accepted on:
+
+```text
+rtx5880-ada × legacy-dfl-rtx3000-20211120
+```
+
+Accepted end-to-end path:
+
+```text
+environment and GPU probe
+→ authorized synthetic dataset preflight
+→ isolated workspace preparation
+→ source/destination face extraction
+→ bounded SAEHD training to iteration 2
+→ save/exit
+→ resume from iteration 2 to iteration 4
+→ merge 3 destination images and 3 masks
+→ visual review
+→ DFM export and ONNX validation
+→ VisoMaster Fusion listing, loading, face detection, and one DFM inference
+```
+
+The four-iteration model is a pipeline compatibility and reproducibility fixture only. No image-quality claim is made.
 
 ## Completed
 
+### Repository and safety framework
+
 - [x] Fork and freeze the archived upstream source.
-- [x] Define the staged modernization roadmap, P0 protocol, security policy, and branch workflow.
-- [x] Add PowerShell 5.1-compatible diagnostics, profile-driven acceptance, per-profile artifacts, and safe computer-switch BAT files.
-- [x] Pass the system-profile scaffold on `hp-a2000 × system-py312`.
-- [x] Obtain, fingerprint, scan, integrity-test, and safely extract the upstream-linked RTX 3000 historical Windows package without executing its SFX.
-- [x] Confirm the portable runtime structure with embedded Python, FFmpeg, `_internal`, DeepFaceLab `main.py`, and `workspace`.
-- [x] Pass the historical runtime read-only probe and static BAT/environment inspection on `hp-a2000` without executing `main.py` or starting training.
-- [x] Add dedicated legacy Python layout inspection for `._pth`, `sys.path`, `site-packages`, package folders, static version files, and launcher BAT text.
-- [x] Synchronize the RTX 5880 Ada computer and create ignored local profiles for its system and historical runtime environments.
-- [x] Complete RTX 5880 Ada system diagnostics with zero warnings.
-- [x] Scan fixed drives `C:\`, `D:\`, and `E:\`; find no reusable historical portable bundle.
-- [x] Re-download the historical RTX 3000 package and confirm exact size `3919330734` bytes and SHA-256 `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
-- [x] Safely extract the verified package without executing its SFX: integrity exit `0`, extraction exit `0`, 29098 archive entries, 23376 files, and 5722 directories.
-- [x] Pass the RTX 5880 Ada read-only runtime probe and static BAT/environment inspection.
-- [x] Pass legacy Python layout inspection on RTX 5880 Ada: both probes completed without timeout; default `sys.path` includes `site-packages`; 138 top-level items, 65 metadata directories, 9 selected artifact groups, 56 top-level BAT files, 112 relevant launcher lines, and 0 warnings.
-- [x] Implement and pass step 10 controlled TensorFlow/CUDA/GPU visibility probing with strict timeout, process-tree termination, sanitized environment, captured logs, sentinel JSON, and workspace comparison.
-- [x] Record the user's explicit zero-risk active-antivirus confirmation before step 10.
-- [x] Pass step 10 on RTX 5880 Ada: TensorFlow `2.6.0`, CUDA build `True`, physical GPU count `1`, local GPU count `1`, timeout `False`, effective exit code `0`, and workspace unchanged `True`.
-- [x] Add `P0_E2E_TEST_PLAN.md` with authorization, privacy, extraction, short-training, save/resume, merge, DFM export, and VisoMaster Fusion acceptance gates.
-- [x] Implement step 11 authorized dataset preflight with path isolation, authorization confirmation, file/size limits, SHA-256 inventory, bounded `ffprobe` metadata sampling, identical-file rejection, and repository/workspace checks.
-- [x] Pass step 11 using two distinct ControlFace10K synthetic identities: source 3 PNG files / 840910 bytes; destination 3 PNG files / 888285 bytes; identical SHA-256 overlap `0`; repository unchanged; historical default workspace unchanged.
-- [x] Implement step 12 isolated P0 workspace preparation with passed-manifest validation, full source-hash revalidation, new-target-only semantics, temporary staging, copied-file hash verification, and no DeepFaceLab or TensorFlow execution.
-- [x] Pass step 12 on RTX 5880 Ada: 3 source and 3 destination images copied to `D:\DFL-P0-Authorized\workspace-p0`; historical default workspace unchanged; repository unchanged.
-- [x] Implement step 13 controlled face extraction with passed-step-10/12 prerequisites, immutable input verification, isolated historical DLL paths, fixed S3FD whole-face parameters, per-role timeouts, temporary outputs, DFLJPG metadata validation, failure cleanup, and no training.
-- [x] Keep step 13 fail closed: existing aligned outputs are never deleted; both roles must pass before temporary outputs are committed; input hashes, historical default workspace, and Git status must remain unchanged.
-- [x] Resolve the observed Windows PowerShell 5.1 parser and strict-mode compatibility issues in step 13 before accepting the run.
-- [x] Pass step 13 on RTX 5880 Ada: source and destination extraction both `passed`; 3 aligned DFLJPG files per role; DFLJPG source mapping and `whole_face` metadata validated; copied input hashes unchanged; historical default workspace unchanged; repository unchanged.
-- [x] Complete the manual visual gate for all six aligned synthetic faces: no blank images, inversion, severe crop, or obvious misdetection was observed.
-- [x] Select SAEHD for the P0 model gate because the historical SAEHD implementation includes the required DFM export path.
-- [x] Implement step 14 controlled first training/save gate: fixed two-iteration SAEHD configuration, redirected first-run answers, recurring graceful-close condition, 900-second timeout, temporary model directory, checkpoint pickle/options/loss validation, aligned-input hash checks, historical default-workspace comparison, and Git cleanliness checks.
-- [x] Keep step 14 fail closed: the final model directory must be empty; partial generated models are never committed; resume, merge, and DFM export remain separate gates.
-- [x] Observe the first step-14 attempt fail closed: preloaded stdin answers were consumed by historical `input_skip_pending()`, the temporary model reached iteration 13, exact-iteration validation blocked the checkpoint, no model was committed, aligned inputs remained unchanged, and the historical workspace and Git tree remained unchanged.
-- [x] Replace preloaded stdin with a deterministic Python 3.6 scripted-input driver that stores answers in memory, bypasses stdin consumption, records each prompt answer, and fails when the consumed-answer count differs.
-- [x] Pass step 14 on RTX 5880 Ada: `p0gate_SAEHD` saved at exact iteration `2`; loss history count `2`; 8 checkpoint files committed; aligned inputs, historical default workspace, and Git working tree unchanged; resume, merge, and DFM export not started.
-- [x] Implement step 15 controlled resume gate: read-only validation of the accepted iteration-2 checkpoint, SHA-256-verified temporary clone, deterministic timed override, target iteration `2 → 4`, 900-second timeout, before/after checkpoint validation, loss-history continuity checks, changed-weight verification, and rollback-capable atomic commit.
-- [x] Keep step 15 fail closed: the accepted iteration-2 checkpoint is not trained in place; blocked resumes remove only the temporary clone and preserve the accepted checkpoint; merge and DFM export remain separate gates.
-- [x] Confirm `git -c http.version=HTTP/1.1 pull --ff-only` works around the observed GitHub transport failures without disabling certificate verification.
+- [x] Define the staged modernization roadmap, branch model, security policy, responsible-use boundary, and P0 protocol.
+- [x] Keep private media, aligned faces, checkpoints, DFM files, embeddings, and local artifacts outside Git.
+- [x] Add PowerShell 5.1-compatible diagnostics, profile-driven acceptance, per-profile artifact paths, and safe computer-switch helpers.
 
-## Verified local results
+### Historical runtime and environment
 
-### `hp-a2000 × system-py312`
+- [x] Fingerprint, scan, integrity-test, and safely extract the upstream-linked RTX 3000 historical Windows package without executing its SFX.
+- [x] Verify package size `3919330734` bytes and SHA-256 `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
+- [x] Verify embedded Python `3.6.8`, DeepFaceLab `main.py`, FFmpeg, `_internal`, historical workspace, Python layout, package metadata, and relevant launcher BAT files.
+- [x] Pass the controlled TensorFlow/CUDA/GPU visibility probe on RTX 5880 Ada: TensorFlow `2.6.0`, CUDA build `True`, one physical GPU, one local GPU, and unchanged historical workspace.
 
-Status: **environment scaffold passed**.
+### Authorized P0 data and extraction
 
-- Windows 11 Pro build 26200; PowerShell 5.1.
-- Intel Core i5-12500; approximately 16 GB RAM.
-- NVIDIA RTX A2000; 5754 MiB VRAM.
-- NVIDIA driver 581.80; compute capability 8.6.
-- System Python 3.12.10 probe passed.
-- No workspace, artifacts, or DFM files are tracked.
+- [x] Use two distinct licensed synthetic ControlFace10K identities: 3 source PNG files and 3 destination PNG files.
+- [x] Pass dataset isolation, authorization confirmation, file-count/size limits, SHA-256 inventory, metadata sampling, identical-file rejection, repository checks, and historical-workspace checks.
+- [x] Prepare isolated workspace `D:\DFL-P0-Authorized\workspace-p0` through a temporary verified staging boundary.
+- [x] Extract 3 valid source and 3 valid destination `whole_face` DFLJPG files using S3FD and GPU index 0.
+- [x] Manually review all six aligned outputs with no blank image, inversion, severe crop, or obvious misdetection.
 
-### `rtx5880-ada × system-py311`
+### Training, resume, merge, and export
 
-Status: **system diagnostics complete with zero warnings**.
+- [x] Select SAEHD because the historical implementation contains the required DFM export path.
+- [x] Pass step 14: create `p0gate_SAEHD` at exact iteration `2`, loss-history count `2`, and 8 committed checkpoint files.
+- [x] Pass step 15: resume the same checkpoint from iteration `2` to `4`, preserve the first two loss rows, preserve options except target iteration, change 5 weight/optimizer files, and atomically commit 8 checkpoint files.
+- [x] Pass step 16: merge exactly 3 destination images and generate exactly 3 nonzero masks; checkpoint and inputs remain unchanged.
+- [x] Complete visual review of the merged images and masks.
+- [x] Pass step 17: export one validated DFM from a temporary checkpoint clone using the historical CPU-only export path.
+- [x] Validate ONNX checker success, opset `12`, input `in_face`, and outputs `out_face_mask`, `out_celeb_face`, and `out_celeb_face_mask`.
 
-- Computer: `DESKTOP-84BCCU9`; ASUS system.
-- Windows 11 Home Chinese edition, build 26200; PowerShell 5.1.26100.8875.
-- Intel Core i5-12600KF; 10 cores / 16 logical processors.
-- Physical memory: approximately 63.8 GB.
+### VisoMaster Fusion compatibility
+
+- [x] Install VisoMaster Fusion in a new isolated portable folder, without reusing FaceFusion, old VisoMaster, ComfyUI, system Python, or DeepFaceLab environments.
+- [x] Verify VisoMaster Fusion branch `main`, commit `560c7645d63c07526fe7109fce6abcabf95768fa`.
+- [x] Copy and re-hash the DFM under `model_assets\dfm_models`.
+- [x] Select `DeepFaceLive (DFM)` and `p0gate_SAEHD_model.dfm`.
+- [x] Load one authorized synthetic destination image, detect one target face, execute `Swap Faces`, observe a changed preview, and keep the application responsive.
+- [x] Observe no blocking CUDA, TensorRT, provider, tensor-name, or tensor-shape failure during the accepted DFM inference.
+- [x] Record P0 Gate F through step 18 with a machine-readable local report and workspace marker.
+
+## Accepted local evidence
+
+### Machine and runtime
+
+- Machine: `DESKTOP-84BCCU9` / `rtx5880-ada`.
+- Windows 11 Home Chinese edition, build 26200; PowerShell 5.1.
+- Intel Core i5-12600KF; approximately 63.8 GB RAM.
 - NVIDIA RTX 5880 Ada Generation; 46068 MiB VRAM.
-- NVIDIA driver 582.16; compute capability 8.9.
-- System Python 3.11.9.
-- System FFmpeg: `C:\ffmpeg_latest\bin\ffmpeg.exe`.
-- System `nvcc`: CUDA 13.1.
-- System CUDA/cuDNN components remain isolated from the historical P0 runtime.
+- NVIDIA driver `582.16`; compute capability `8.9`.
+- Historical runtime root: `D:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series`.
+- Historical embedded Python: `3.6.8`.
+- Historical TensorFlow: `2.6.0`.
 
-### `rtx5880-ada × legacy-dfl-rtx3000-20211120`
+### Final model and DFM
 
-Status: **historical runtime, TensorFlow/GPU visibility, extraction, visual review, and initial SAEHD training/save passed**.
+- Model prefix: `p0gate_SAEHD`.
+- Final P0 iteration: `4`.
+- Checkpoint files: `8`.
+- DFM path: `D:\DFL-P0-Authorized\workspace-p0\dfm\p0gate_SAEHD_model.dfm`.
+- DFM size: `27654198` bytes.
+- DFM SHA-256: `E2F7E8810384FCE392DA0FA8D036795A93282C223E743855E5BCCB1EF22047C8`.
+- VisoMaster Fusion commit: `560c7645d63c07526fe7109fce6abcabf95768fa`.
 
-Runtime root:
+### Final reports
 
-```text
-D:\DFL-Legacy\DFL_NVIDIA_RTX3000_20211120\DeepFaceLab_NVIDIA_RTX3000_series
-```
+- Resume report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\resume-training-save\p0-resume-training-save-v2-20260721T141856Z.json`.
+- Merge report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\merge\p0-controlled-merge-20260721T142130Z.json`.
+- DFM export report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\dfm-export\p0-controlled-dfm-export-20260721T142402Z.json`.
+- VisoMaster report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\visomaster-fusion\p0-visomaster-fusion-acceptance-v2-20260721T150505Z.json`.
+- Workspace Gate F marker: `D:\DFL-P0-Authorized\workspace-p0\p0-visomaster-fusion-manifest.json`.
 
-Observed:
+## Other verified node
 
-- Historical package fingerprint matched exactly.
-- Embedded Python: `3.6.8`.
-- Read-only runtime probe: `passed`.
-- Static environment inspection: `passed`.
-- Python layout inspection schema v4: `passed`.
-- TensorFlow/GPU visibility: `passed`; TensorFlow `2.6.0`; CUDA build `True`; one physical and one local GPU.
-- Step 10 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\tensorflow-gpu-probe\legacy-tensorflow-gpu-visibility-20260720T125554Z.json`.
-- Step 11 manifest: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\dataset-preflight\p0-authorized-dataset-manifest-20260720T132514Z.json`.
-- Isolated workspace: `D:\DFL-P0-Authorized\workspace-p0`.
-- Step 12 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\workspace-preparation\p0-isolated-workspace-preparation-20260720T133322Z.json`.
-- Source inputs: `src_0001.png` through `src_0003.png`.
-- Destination inputs: `dst_0001.png` through `dst_0003.png`.
-- Source aligned outputs: 3 valid DFLJPG files.
-- Destination aligned outputs: 3 valid DFLJPG files.
-- Extraction parameters: S3FD, `whole_face`, maximum 1 face per image, aligned size 512, JPEG quality 90, GPU index 0.
-- Step 13 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\face-extraction\p0-controlled-face-extraction-20260720T143447Z.json`.
-- Manual visual review: all six aligned outputs passed; no blank image, inversion, severe crop, or obvious misdetection was reported.
-- First step-14 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\initial-training-save\p0-initial-training-save-20260720T145727Z.json`.
-- First step-14 status: `blocked_invalid_checkpoint`; temporary iteration `13`; loss history `13`; checkpoint committed `False`; aligned inputs, historical default workspace, and Git tree unchanged.
-- Accepted step-14 report: `artifacts\p0\rtx5880-ada\legacy-dfl-rtx3000-20211120\initial-training-save\p0-initial-training-save-20260720T150802Z.json`.
-- Accepted model: `p0gate_SAEHD`; iteration `2`; loss history count `2`; checkpoint file count `8`; checkpoint committed `True`.
-- Aligned inputs, historical default workspace, and Git working tree remained unchanged through accepted step 14.
-- Checkpoint resume, merge, and DFM export have not yet been executed.
+### `hp-a2000`
 
-## Historical package baseline verified on `hp-a2000`
+- Windows 11 Pro build 26200, Intel Core i5-12500, approximately 16 GB RAM.
+- NVIDIA RTX A2000, approximately 6 GB VRAM, driver `581.80`, compute capability `8.6`.
+- Historical package fingerprint and runtime layout verified.
+- TensorFlow/GPU visibility passed with TensorFlow `2.6.0`.
+- A separate P0 run reached extraction, short training, resume, merge, and DFM export, but the project needs only one documented complete profile for P0 acceptance.
+- The incomplete isolated VisoMaster portable installation on this computer is not reused or copied.
 
-Original package:
+## Current work
 
-```text
-F:\FDeepFaceLab-Historical-Downloads\DeepFaceLab\DeepFaceLab_NVIDIA_RTX3000_series_build_11_20_2021.exe
-```
+- [ ] Review final PR #1 changes and merge the accepted P0 framework into `develop`.
+- [ ] Create `agent/p1-engineering-reliability` from the merged `develop` branch.
+- [ ] Implement the first P1 slice: CPU-only repository/report validation and a one-command acceptance summary that never touches media, checkpoints, DFM files, or the historical runtime.
+- [ ] Add no-GPU tests for report schemas, path isolation, privacy boundaries, failure classifications, and PowerShell/Python helper logic.
 
-- Size: `3919330734` bytes.
-- SHA-256: `4CA31C30CA8F683A825A643E7090811D750C1250775537DCDB5C80D5F3B7F722`.
-- Authenticode: `NotSigned`.
-- SFX stub metadata: 7-Zip 19.00.
-- Archive integrity exit code: `0`.
-- Huorong package-folder scan: `0` risks.
-- Microsoft Safety Scanner: `No infection found`, return code `0`.
-- The fingerprint is a stable local identity check, not proof of publisher identity.
+## P1 initial implementation order
 
-## In progress
-
-- [ ] Complete step 9 on `hp-a2000` when that computer is used again.
-- [ ] Run step 15 on RTX 5880 Ada and validate checkpoint load, iteration `2 → 4`, preserved first two loss rows, finite new losses, changed weights, graceful save/exit, and atomic commit.
-- [ ] Implement and run a separately bounded merge gate after step 15 passes.
-- [ ] Execute DFM export and VisoMaster Fusion loading under separate staged acceptance gates.
-
-## Next local work on RTX 5880 Ada
-
-1. Pull the step-15 implementation and this progress update.
-2. Parse the step-15 PowerShell script and compile the updated scripted-input driver plus resume validator with embedded Python 3.6.
-3. Confirm the formal model directory still contains the accepted 8-file iteration-2 checkpoint and no resume staging/backup directories exist.
-4. Run `15_受控恢复短训练并保存.bat` against `D:\DFL-P0-Authorized\workspace-p0` and confirm the resume phrase.
-5. Review the terminal summary and report/log paths; do not upload face images or checkpoint files.
-6. Do not manually resume again, merge, or export DFM until step 15 is accepted.
+1. P1 repository hygiene and privacy validator.
+2. P1 report-schema validator for P0 steps 10–18.
+3. One-command Windows acceptance-summary orchestrator.
+4. Structured failure codes and actionable remediation text.
+5. Checkpoint inventory, backup, interruption, rollback, and corruption-recovery design.
+6. CPU-only CI workflow.
+7. Contributor, release, security, troubleshooting, and rollback documentation.
 
 ## Known risks
 
-- The historical stack contains old Python, TensorFlow, CUDA, cuDNN, NumPy, SciPy, h5py, OpenCV, ONNX, and tf2onnx components.
-- Modern dependency upgrades may break binary compatibility, checkpoint behavior, numerical output, or DFM export.
-- The downloaded EXE is unsigned and no official published checksum was located.
-- Clean local scans reduce risk but do not prove publisher identity or absolute safety.
-- TensorFlow/GPU visibility, extraction, visual review, and initial training/save have passed, but checkpoint resume, merge, export, and DFM loading remain distinct acceptance gates.
-- Three images per identity and four total training iterations are suitable for pipeline validation only, not visual quality evaluation.
-- P0 cannot be accepted until save/resume, merge, DFM export, and VisoMaster Fusion loading are verified.
+- The historical runtime contains old Python, TensorFlow, CUDA, cuDNN, NumPy, SciPy, h5py, OpenCV, ONNX, and tf2onnx components.
+- Modern dependency upgrades can break binary compatibility, checkpoint behavior, numerical output, merger behavior, or DFM export.
+- The historical package is unsigned; exact local fingerprints and clean scans reduce risk but do not prove publisher identity or absolute safety.
+- Three images per identity and four total iterations validate the pipeline only, not production quality.
+- The VisoMaster preview from the four-iteration model is expected to be poor and must not be presented as a quality benchmark.
+- GitHub TLS transport can intermittently fail under Windows Schannel; use a verified retry or per-command OpenSSL backend without disabling certificate verification.
 
 ## Milestone status
 
 | Milestone | Status | Exit condition |
 |---|---|---|
-| P0 Reproducible baseline | Active | End-to-end authorized test run and DFM load verified |
-| P1 Engineering reliability | Not started | Installer, diagnostics, tests, logging, recovery |
-| P2 Modern GPU compatibility | Not started | Validated modern runtime matrix without regressions |
-| P3 Workflow improvements | Not started | Dataset, XSeg, queue, dashboard, export improvements |
-| P4 Algorithm research | Not started | Benchmarked optional modern backends/models |
+| P0 Reproducible baseline | **Complete** | Authorized end-to-end run, save/resume, merge, DFM export, and VisoMaster inference recorded |
+| P1 Engineering reliability | **Starting** | One-command workflow, structured logs, recovery, no-GPU tests/CI, and engineering documentation |
+| P2 Modern GPU compatibility | Not started | Validated modern runtime matrix without P0 regressions |
+| P3 Workflow improvements | Not started | Dataset, mask, training, queue, and export workflow improvements |
+| P4 Optional algorithm research | Not started | Optional algorithms benchmarked against the frozen P0 baseline |
