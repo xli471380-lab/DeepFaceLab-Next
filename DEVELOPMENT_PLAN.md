@@ -2,9 +2,9 @@
 
 ## Mission
 
-DeepFaceLab-Next is a maintained, testable, and reproducible continuation of DeepFaceLab. The project will preserve the original person-specific training workflow and DFM ecosystem while improving Windows setup, diagnostics, modern NVIDIA GPU compatibility, reliability, and contributor documentation.
+DeepFaceLab-Next is a maintained, testable, and reproducible continuation of DeepFaceLab. The project preserves the original person-specific training workflow and DFM ecosystem while improving Windows setup, diagnostics, modern NVIDIA GPU compatibility, reliability, and contributor documentation.
 
-The upstream baseline is `iperov/DeepFaceLab` at commit `e4b7543ffa1d73b26fce1e31852727f658ba490c` (2024-11-13).
+The frozen upstream baseline is `iperov/DeepFaceLab` commit `e4b7543ffa1d73b26fce1e31852727f658ba490c` (2024-11-13).
 
 ## Non-negotiable principles
 
@@ -14,14 +14,17 @@ The upstream baseline is `iperov/DeepFaceLab` at commit `e4b7543ffa1d73b26fce1e3
 4. Establish reproducible tests before changing training algorithms or dependency versions.
 5. Never claim quality, speed, or compatibility improvements without recorded evidence.
 6. Support only authorized, consensual, and clearly disclosed synthetic-media use.
+7. Never commit private media, aligned faces, checkpoints, DFM files, embeddings, credentials, or local machine artifacts.
 
 ## Branch model
 
-- `master`: protected historical/release baseline.
+- `master`: protected historical upstream/release baseline.
 - `develop`: reviewed integration branch.
 - `agent/*`: scoped implementation branches merged through pull requests.
 
-Initial branch: `agent/p0-reproducible-baseline`.
+Completed initial branch: `agent/p0-reproducible-baseline`.
+
+Planned next branch after PR #1 is merged: `agent/p1-engineering-reliability`.
 
 ## Roadmap
 
@@ -33,23 +36,31 @@ Required gates:
 
 - Record OS, CPU, RAM, GPU, driver, CUDA, Python, FFmpeg, Git, and repository commit.
 - Extract source and destination faces from a small authorized test dataset.
-- Start a short training run and record iteration speed and VRAM use.
+- Start a short training run and record its bounded result.
 - Save, stop, reload, and resume the model.
-- Merge a short test clip.
-- Export a DFM model.
-- Load the DFM model in a supported consumer such as VisoMaster Fusion and record the result.
+- Merge a small destination set and review the outputs and masks.
+- Export and structurally validate a DFM model.
+- Load and execute the DFM model in VisoMaster Fusion.
 - Store machine-readable reports without committing private media or trained identity data.
 
 P0 explicitly does **not** upgrade TensorFlow, Python, CUDA, NumPy, OpenCV, or the model architecture.
 
+Status: **completed on `rtx5880-ada × legacy-dfl-rtx3000-20211120` on 2026-07-21**. The four-iteration model proves compatibility and reproducibility only; it makes no quality claim.
+
 ### P1 — Engineering reliability
 
-- One-command Windows diagnostics and acceptance scripts.
-- Reproducible environment manifests and dependency hashes.
-- Structured logs and actionable error messages.
+Goal: turn the proven historical workflow into a safer, easier-to-run, diagnosable engineering system without changing model mathematics or the historical runtime.
+
+Required outcomes:
+
+- One-command Windows diagnostics and acceptance orchestration.
+- Reproducible environment manifests and dependency/file hashes.
+- Structured logs, stable report schemas, and actionable failure classifications.
 - Safe interruption, autosave, resume, backup, and corrupted-checkpoint recovery.
-- CI checks that do not require a GPU.
-- Contributor, release, security, and troubleshooting documentation.
+- CPU-only/no-GPU CI checks for parsers, validators, policy boundaries, and scripts.
+- Contributor, release, security, migration, rollback, and troubleshooting documentation.
+
+P1 must preserve the accepted P0 checkpoint, merge, DFM export, and consumer-compatibility boundaries.
 
 ### P2 — Modern NVIDIA compatibility
 
@@ -65,7 +76,7 @@ P0 explicitly does **not** upgrade TensorFlow, Python, CUDA, NumPy, OpenCV, or t
 - Better XSeg workflow and mask-quality checks.
 - Training dashboard, progress history, ETA, and task queue.
 - Safer model backup, comparison, and export workflows.
-- VisoMaster Fusion export validation.
+- Automated VisoMaster Fusion export validation where technically feasible.
 
 ### P4 — Optional algorithm research
 
@@ -86,8 +97,10 @@ A change that affects training, checkpoints, merging, or export must include:
 - Before/after metrics.
 - Save/resume verification.
 - Compatibility and rollback notes.
-- Confirmation that no private datasets, faces, model weights, or credentials were committed.
+- Confirmation that no private datasets, faces, model weights, DFM files, embeddings, or credentials were committed.
 
 ## Current priority
 
-Complete P0 documentation and diagnostics, then run the first local baseline acceptance on the maintainer's Windows/NVIDIA workstation.
+1. Review and merge PR #1 into `develop` as the accepted P0 baseline framework.
+2. Create `agent/p1-engineering-reliability` from the merged `develop` branch.
+3. Begin P1 with a CPU-only repository validator and one-command acceptance orchestrator that can summarize existing P0 reports without touching media, checkpoints, DFM files, or the historical runtime.
