@@ -12,7 +12,7 @@ if not defined WORKSPACE set /p "WORKSPACE=Enter isolated P0 workspace path: "
 
 echo.
 echo ============================================================
-echo   DeepFaceLab-Next - P0 controlled checkpoint resume gate v2
+echo   DeepFaceLab-Next - P0 controlled checkpoint resume gate v3
 echo ============================================================
 echo.
 echo This step loads the accepted two-iteration SAEHD checkpoint,
@@ -29,11 +29,13 @@ echo - GPU index: 0
 echo - no preview window
 echo - overall timeout: 900 seconds
 echo.
-echo Deterministic v2 resume method:
+echo Deterministic v3 resume method:
 echo - validates and clones the accepted checkpoint first
 echo - changes target_iter 2 to 4 only inside the temporary clone
 echo - answers the timed override prompt with no
 echo - sends zero blocking configuration answers
+echo - disables only the interactive stale-stdin drain in this no-stdin run
+echo - unblocks the parent if historical trainer initialization fails
 echo.
 echo Safety controls:
 echo - requires the passed step-14 workspace marker
@@ -74,11 +76,11 @@ set "RC=%ERRORLEVEL%"
 
 echo.
 if "%RC%"=="0" (
-    echo Controlled P0 checkpoint resume gate v2 passed.
+    echo Controlled P0 checkpoint resume gate v3 passed.
     echo The same SAEHD checkpoint advanced from iteration 2 to 4.
     echo Copy the generated summary into the development chat.
 ) else (
-    echo Controlled P0 checkpoint resume gate v2 was blocked.
+    echo Controlled P0 checkpoint resume gate v3 was blocked.
     echo Copy the status, report path, preparation result, and stderr tails into the development chat.
     echo Do NOT manually resume training, merge, or export DFM.
 )
