@@ -10,13 +10,16 @@
 !*.psd1
 !*.json
 !*.bat
+!*.yml
+!*.yaml
 !requirements*
 !Dockerfile*
 !*.sh
 
 # Never track local runtime profiles, generated reports, workspaces, media,
-# checkpoints, or exported identity models.
+# checkpoints, exported identity models, or local test output.
 config/local/
 artifacts/
 workspace/
+.p1-local/
 *.dfm
