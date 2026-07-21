@@ -12,7 +12,7 @@ if not defined WORKSPACE set /p "WORKSPACE=Enter isolated P0 workspace path: "
 
 echo.
 echo ============================================================
-echo   DeepFaceLab-Next - P0 controlled checkpoint resume gate
+echo   DeepFaceLab-Next - P0 controlled checkpoint resume gate v2
 echo ============================================================
 echo.
 echo This step loads the accepted two-iteration SAEHD checkpoint,
@@ -29,6 +29,12 @@ echo - GPU index: 0
 echo - no preview window
 echo - overall timeout: 900 seconds
 echo.
+echo Deterministic v2 resume method:
+echo - validates and clones the accepted checkpoint first
+echo - changes target_iter 2 to 4 only inside the temporary clone
+echo - answers the timed override prompt with no
+echo - sends zero blocking configuration answers
+echo.
 echo Safety controls:
 echo - requires the passed step-14 workspace marker
 echo - validates the accepted checkpoint before copying it
@@ -37,7 +43,7 @@ echo - preserves the first two loss-history rows exactly
 echo - requires finite new losses and changed weight files
 echo - checks aligned hashes, historical workspace, and Git status
 echo - atomically swaps the resumed checkpoint only after acceptance
-echo - restores the iteration-2 checkpoint when blocked
+echo - preserves the iteration-2 checkpoint when blocked
 echo.
 echo It will execute DeepFaceLab main.py and TensorFlow training.
 echo It will NOT merge images or export a DFM.
@@ -63,17 +69,17 @@ if /i not "%CONFIRM%"=="RESUME-P0-CHECKPOINT" (
 )
 
 echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\run-p0-resume-training-save-gate.ps1" -ProfilePath "%PROFILE%" -WorkspaceRoot "%WORKSPACE%" -ResumeConfirmed
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\run-p0-resume-training-save-gate-v2.ps1" -ProfilePath "%PROFILE%" -WorkspaceRoot "%WORKSPACE%" -ResumeConfirmed
 set "RC=%ERRORLEVEL%"
 
 echo.
 if "%RC%"=="0" (
-    echo Controlled P0 checkpoint resume gate passed.
+    echo Controlled P0 checkpoint resume gate v2 passed.
     echo The same SAEHD checkpoint advanced from iteration 2 to 4.
     echo Copy the generated summary into the development chat.
 ) else (
-    echo Controlled P0 checkpoint resume gate was blocked.
-    echo Copy the status, report path, and stderr tails into the development chat.
+    echo Controlled P0 checkpoint resume gate v2 was blocked.
+    echo Copy the status, report path, preparation result, and stderr tails into the development chat.
     echo Do NOT manually resume training, merge, or export DFM.
 )
 
