@@ -13,8 +13,11 @@ import traceback
 
 BEGIN = "__DFLNEXT_DFM_EXPORT_JSON_BEGIN__"
 END = "__DFLNEXT_DFM_EXPORT_JSON_END__"
+EXPECTED_EXPORT_PROMPT = "[n] Export quantized? ( y/n ?:help ) :"
 _SKIP_PENDING_COUNT = 0
+_EXPECTED_EXPORT_PROMPT_COUNT = 0
 _UNEXPECTED_PROMPT_COUNT = 0
+_UNEXPECTED_PROMPTS = []
 
 
 def sha256_file(path):
@@ -36,17 +39,34 @@ def deterministic_skip_pending(self):
     return None
 
 
-def reject_prompt(prompt=""):
+def deterministic_export_input(prompt=""):
+    global _EXPECTED_EXPORT_PROMPT_COUNT
     global _UNEXPECTED_PROMPT_COUNT
+    global _UNEXPECTED_PROMPTS
+
+    normalized = str(prompt).strip()
+    if normalized == EXPECTED_EXPORT_PROMPT:
+        _EXPECTED_EXPORT_PROMPT_COUNT += 1
+        print(
+            "DFLNEXT fixed-model exporter: Export quantized? "
+            "[deterministic response: n]"
+        )
+        sys.stdout.flush()
+        return "n"
+
     _UNEXPECTED_PROMPT_COUNT += 1
+    _UNEXPECTED_PROMPTS.append(str(prompt))
     raise RuntimeError(
-        "Unexpected blocking DeepFaceLab prompt during fixed-model export: %s" % prompt
+        "Unexpected blocking DeepFaceLab prompt during fixed-model export: %s"
+        % prompt
     )
 
 
 def main():
     global _SKIP_PENDING_COUNT
+    global _EXPECTED_EXPORT_PROMPT_COUNT
     global _UNEXPECTED_PROMPT_COUNT
+    global _UNEXPECTED_PROMPTS
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--dfl-root", required=True)
@@ -62,7 +82,7 @@ def main():
     expected_dfm = model_dir / (model_prefix + "_model.dfm")
 
     result = {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "blocked_not_started",
         "dfl_root": str(dfl_root),
         "model_dir": str(model_dir),
@@ -75,7 +95,11 @@ def main():
         "dfm_exists": False,
         "dfm_size_bytes": 0,
         "dfm_sha256": None,
+        "quantized_export": False,
+        "expected_export_prompt": EXPECTED_EXPORT_PROMPT,
+        "expected_export_prompt_count": 0,
         "unexpected_prompt_count": 0,
+        "unexpected_prompts": [],
         "stdin_drain_skip_count": 0,
         "errors": [],
         "safety": {
@@ -84,6 +108,7 @@ def main():
             "training_started": False,
             "merge_started": False,
             "historical_runtime_modified": False,
+            "only_expected_export_prompt_allowed": True,
         },
     }
 
@@ -115,7 +140,7 @@ def main():
         interact_class = type(interact_object)
         original_input_skip_pending = interact_class.input_skip_pending
         interact_class.input_skip_pending = deterministic_skip_pending
-        builtins.input = reject_prompt
+        builtins.input = deterministic_export_input
 
         from core.leras import nn
 
@@ -128,6 +153,7 @@ def main():
 
         print("DFLNEXT fixed-model exporter: model %s." % model_prefix)
         print("DFLNEXT fixed-model exporter: official CPU-only export path.")
+        print("DFLNEXT fixed-model exporter: quantized export fixed to no.")
         sys.stdout.flush()
 
         model = models.import_model(args.model_class)(
@@ -148,7 +174,9 @@ def main():
         model.export_dfm()
 
         if not expected_dfm.is_file():
-            raise RuntimeError("DFM export did not create the expected file: %s" % expected_dfm)
+            raise RuntimeError(
+                "DFM export did not create the expected file: %s" % expected_dfm
+            )
         if expected_dfm.stat().st_size <= 0:
             raise RuntimeError("DFM export created an empty file: %s" % expected_dfm)
 
@@ -183,10 +211,21 @@ def main():
         builtins.input = original_input
         os.chdir(original_cwd)
 
+    result["expected_export_prompt_count"] = _EXPECTED_EXPORT_PROMPT_COUNT
     result["unexpected_prompt_count"] = _UNEXPECTED_PROMPT_COUNT
+    result["unexpected_prompts"] = list(_UNEXPECTED_PROMPTS)
     result["stdin_drain_skip_count"] = _SKIP_PENDING_COUNT
 
     if result["status"] == "passed":
+        if _EXPECTED_EXPORT_PROMPT_COUNT != 1:
+            result["status"] = "blocked_expected_export_prompt_count"
+            result["errors"].append(
+                {
+                    "type": "expected_export_prompt_count",
+                    "actual": _EXPECTED_EXPORT_PROMPT_COUNT,
+                    "expected": 1,
+                }
+            )
         if _UNEXPECTED_PROMPT_COUNT != 0:
             result["status"] = "blocked_unexpected_prompt"
             result["errors"].append(
@@ -194,6 +233,7 @@ def main():
                     "type": "unexpected_prompt_count",
                     "actual": _UNEXPECTED_PROMPT_COUNT,
                     "expected": 0,
+                    "prompts": list(_UNEXPECTED_PROMPTS),
                 }
             )
         if _SKIP_PENDING_COUNT != 1:
