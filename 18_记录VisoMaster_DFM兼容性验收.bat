@@ -14,7 +14,7 @@ if not defined FUSION_ROOT set "FUSION_ROOT=E:\SECourses\VisoMaster-Fusion\VisoM
 
 echo.
 echo ============================================================
-echo   DeepFaceLab-Next - P0 VisoMaster Fusion acceptance record
+echo   DeepFaceLab-Next - P0 VisoMaster Fusion acceptance record v2
 echo ============================================================
 echo.
 echo This step records the already-observed P0 Gate F result.
@@ -61,7 +61,7 @@ if /i not "%CONFIRM%"=="ACCEPT-P0-VISOMASTER" (
 )
 
 echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\record-p0-visomaster-fusion-acceptance.ps1" -ProfilePath "%PROFILE%" -WorkspaceRoot "%WORKSPACE%" -FusionRoot "%FUSION_ROOT%" -AcceptanceConfirmed -DfmListedConfirmed -ImageLoadedConfirmed -FaceDetectedConfirmed -InferenceExecutedConfirmed -PreviewChangedConfirmed -ApplicationStableConfirmed -NoBlockingProviderErrorsConfirmed
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\record-p0-visomaster-fusion-acceptance-v2.ps1" -ProfilePath "%PROFILE%" -WorkspaceRoot "%WORKSPACE%" -FusionRoot "%FUSION_ROOT%" -AcceptanceConfirmed -DfmListedConfirmed -ImageLoadedConfirmed -FaceDetectedConfirmed -InferenceExecutedConfirmed -PreviewChangedConfirmed -ApplicationStableConfirmed -NoBlockingProviderErrorsConfirmed
 set "RC=%ERRORLEVEL%"
 
 echo.
