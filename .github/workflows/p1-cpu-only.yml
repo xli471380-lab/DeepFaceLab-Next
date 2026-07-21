@@ -34,7 +34,24 @@ jobs:
         run: python -m unittest discover -s tests/p1 -p "test_*.py" -v
 
       - name: Validate repository privacy boundary
+        id: privacy
+        continue-on-error: true
         run: >-
           python scripts/p1/repository_privacy_validator.py
           --repo-root .
           --json-output .p1-local/ci-repository-privacy-report.json
+
+      - name: Upload safe privacy report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-privacy-report-${{ matrix.os }}
+          path: .p1-local/ci-repository-privacy-report.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Fail when privacy validation blocked
+        if: steps.privacy.outcome == 'failure'
+        run: |
+          echo "Repository privacy validation blocked. Download the safe report artifact for findings."
+          exit 1
