@@ -4,9 +4,11 @@ import argparse
 import base64
 import builtins
 import json
+import multiprocessing
 import os
 import runpy
 import sys
+from pathlib import Path
 
 
 def _decode_answers(encoded):
@@ -30,6 +32,74 @@ def _system_exit_code(value):
     return 1
 
 
+def _parse_gpu_indexes(value):
+    if value is None:
+        return None
+
+    parts = [part.strip() for part in str(value).split(",")]
+    parts = [part for part in parts if part]
+    if not parts:
+        return None
+
+    indexes = [int(part) for part in parts]
+    if any(index < 0 for index in indexes):
+        raise RuntimeError("GPU indexes must be non-negative integers.")
+    return indexes
+
+
+def _run_merge_direct(main_arguments):
+    parser = argparse.ArgumentParser(prog="DeepFaceLab merge")
+    parser.add_argument("--input-dir", required=True)
+    parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--output-mask-dir", required=True)
+    parser.add_argument("--aligned-dir", default=None)
+    parser.add_argument("--model-dir", required=True)
+    parser.add_argument("--model", required=True)
+    parser.add_argument("--force-model-name", default=None)
+    parser.add_argument("--cpu-only", action="store_true")
+    parser.add_argument("--force-gpu-idxs", default=None)
+    args = parser.parse_args(main_arguments[1:])
+
+    gpu_indexes = _parse_gpu_indexes(args.force_gpu_idxs)
+
+    # Historical main.py converts --force-gpu-idxs to a list for training,
+    # but passes the raw string to the merge entrypoint. ModelBase expects a
+    # list of integer indexes, so call the historical Merger directly with the
+    # correctly typed value while leaving the historical runtime untouched.
+    try:
+        multiprocessing.set_start_method("spawn")
+    except RuntimeError:
+        pass
+
+    from core.leras import nn
+
+    nn.initialize_main_env()
+
+    from core import osex
+    from mainscripts import Merger
+
+    osex.set_process_lowest_prio()
+
+    print(
+        "DFLNEXT scripted prompt driver: direct merge GPU indexes %s."
+        % (gpu_indexes,)
+    )
+    sys.stdout.flush()
+
+    Merger.main(
+        model_class_name=args.model,
+        saved_models_path=Path(args.model_dir),
+        force_model_name=args.force_model_name,
+        input_path=Path(args.input_dir),
+        output_path=Path(args.output_dir),
+        output_mask_path=Path(args.output_mask_dir),
+        aligned_path=Path(args.aligned_dir) if args.aligned_dir is not None else None,
+        force_gpu_idxs=gpu_indexes,
+        cpu_only=args.cpu_only,
+    )
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dfl-root", required=True)
@@ -49,6 +119,8 @@ def main():
         raise RuntimeError("DeepFaceLab root does not exist: %s" % dfl_root)
     if not os.path.isfile(main_py):
         raise RuntimeError("DeepFaceLab main.py does not exist: %s" % main_py)
+    if not main_arguments:
+        raise RuntimeError("A DeepFaceLab command is required.")
 
     answers = _decode_answers(args.answers_b64)
     answer_index = [0]
@@ -90,10 +162,9 @@ def main():
 
         if args.force_timed_input:
             from core.interact import interact as interact_object
+
             original_input_in_time = interact_object.input_in_time
             interact_object.input_in_time = forced_input_in_time
-
-        sys.argv = [main_py] + main_arguments
 
         print(
             "DFLNEXT scripted prompt driver: armed with %d answers."
@@ -104,7 +175,11 @@ def main():
         sys.stdout.flush()
 
         try:
-            runpy.run_path(main_py, run_name="__main__")
+            if main_arguments[0] == "merge":
+                exit_code = _run_merge_direct(main_arguments)
+            else:
+                sys.argv = [main_py] + main_arguments
+                runpy.run_path(main_py, run_name="__main__")
         except SystemExit as exc:
             exit_code = _system_exit_code(exc.code)
     finally:
