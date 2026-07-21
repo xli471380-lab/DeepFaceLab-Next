@@ -1,0 +1,40 @@
+name: P1 CPU-only reliability
+
+on:
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  privacy-and-unit-tests:
+    name: Privacy and unit tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Run P1 unit tests
+        run: python -m unittest discover -s tests/p1 -p "test_*.py" -v
+
+      - name: Validate repository privacy boundary
+        run: >-
+          python scripts/p1/repository_privacy_validator.py
+          --repo-root .
+          --json-output .p1-local/ci-repository-privacy-report.json
